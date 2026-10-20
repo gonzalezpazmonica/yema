@@ -1,0 +1,121 @@
+{
+  "id": "C-EJEMPLO",
+  "version": 1,
+  "estado": "borrador",
+  "proposito": "Ejemplo: avanzar trabajo pendiente de un repositorio en su rama local (revisar, integrar ramas revisadas, cerrar hallazgos menores). Publicar e integrar en remoto queda para la persona.",
+  "responsable": "operadora",
+  "ejecutora": "yema",
+  "nivel": "E2",
+  "contexto": {
+    "cupulas": [
+      "savia-docs"
+    ],
+    "fuentes": [
+      "README del repositorio de trabajo"
+    ],
+    "tesis": "Una ejecutora con contrato puede avanzar en ciclos largos sin vigilancia paso a paso y sin efectos fuera de lo concedido."
+  },
+  "spec": "ruta/a/la/spec.md",
+  "ambito": {
+    "raiz": "/ruta/absoluta/al/repositorio",
+    "escritura": [
+      "crates/*",
+      "apps/*",
+      "docs/*",
+      "scripts/*",
+      "fixtures/*",
+      "contracts/*",
+      "Cargo.toml",
+      "Cargo.lock"
+    ],
+    "vetadas": [
+      "*.env",
+      "*secret*",
+      "packaging/*"
+    ]
+  },
+  "autoridad": {
+    "efectos": [
+      "leer",
+      "escribir",
+      "ejecutar",
+      "red",
+      "git-local",
+      "fusionar"
+    ],
+    "prohibidos": [
+      "git-remoto",
+      "publicar",
+      "escribir-cupula",
+      "delegar"
+    ],
+    "ordenes": [
+      "cargo fmt",
+      "cargo clippy",
+      "cargo build",
+      "cargo test",
+      "cargo check",
+      "npm ci",
+      "npm test",
+      "npm run",
+      "gradlew testDebugUnitTest",
+      "git status",
+      "git diff",
+      "git log",
+      "git show",
+      "git add",
+      "git commit",
+      "git branch",
+      "git switch agent/*",
+      "git switch -c agent/*",
+      "git switch main",
+      "git rev-parse",
+      "git merge --no-ff agent/*",
+      "bash ~/.yema/casa/verificar.sh"
+    ],
+    "caduca": "2030-01-01T00:00:00+00:00"
+  },
+  "recursos": {
+    "efectos_max": 400,
+    "nota": "El presupuesto cuenta efectos materiales; el consumo de tokens no es visible para la puerta en v0."
+  },
+  "condiciones": {
+    "pre": [
+      "rama principal local limpia y verificada",
+      "copia de seguridad antes de cada integración"
+    ],
+    "invariantes": [
+      "nunca relajar validaciones ni pruebas para que algo pase",
+      "sin datos reales en el repositorio"
+    ],
+    "post": [
+      {
+        "id": "verificado",
+        "orden": "bash ~/.yema/casa/verificar.sh",
+        "espera": "rc=0"
+      },
+      {
+        "id": "evidencia",
+        "orden": "python3 nucleo/yema.py evidencia C-EJEMPLO",
+        "espera": "cadena íntegra"
+      },
+      {
+        "id": "informe",
+        "descripcion": "memoria/C-EJEMPLO.md con lo hecho, lo pendiente y lo que necesita decisión"
+      }
+    ]
+  },
+  "evidencia": {
+    "requerida": [
+      "recibo-decision",
+      "recibo-efecto",
+      "postcondiciones",
+      "revision-independiente-por-rama-integrada",
+      "aceptacion-humana"
+    ]
+  },
+  "enmiendas_previstas": [
+    "Push y PR con credencial acotada: versión posterior.",
+    "Varias raíces (worktrees por rama)."
+  ]
+}

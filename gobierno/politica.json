@@ -1,0 +1,32 @@
+{
+  "estado": "~/.yema",
+  "aprobadoras": [
+    "operadora"
+  ],
+  "efectos_sin_contrato": [
+    "leer"
+  ],
+  "zonas_libres": [
+    "contratos/borradores/*",
+    "buzon/salida/*",
+    "memoria/*"
+  ],
+  "cupulas_lectura": [
+    "savia-docs",
+    "SaviaLearning"
+  ],
+  "lectura_vetada": [
+    "~/.ssh/*",
+    "~/.gnupg/*",
+    "~/.azure/*",
+    "~/.aws/*",
+    "~/.config/gh/hosts.yml",
+    "~/.savia/confidentiality-key",
+    "~/.savia/grants/*",
+    "~/.local/share/opencode/auth.json",
+    "*.env",
+    ".env.*",
+    "*.pem",
+    "*.key"
+  ]
+}

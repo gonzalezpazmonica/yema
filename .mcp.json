@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "savia-vaults": {
+      "type": "stdio",
+      "command": "${SAVIA_VAULTS_NODE:-node}",
+      "args": [
+        "${SAVIA_VAULTS_DIR:-${HOME}/savia/projects/savia-vaults}/dist/cli/index.js",
+        "serve", "--transport", "mcp",
+        "--domes", "${SAVIA_VAULTS_DOMES:-${HOME}/savia/projects/savia-vaults/savia-vaults.domes.json}"
+      ]
+    }
+  }
+}

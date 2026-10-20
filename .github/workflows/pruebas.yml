@@ -1,0 +1,14 @@
+name: pruebas
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  nucleo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Núcleo, garantías negativas y presupuesto de arranque
+        run: python3 -m unittest discover -s pruebas -v
