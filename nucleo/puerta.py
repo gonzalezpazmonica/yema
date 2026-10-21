@@ -226,6 +226,46 @@ def mkdir_en_zona_libre(cmd, cwd, estado, pol):
     return True
 
 
+LECTURA_CONOCIDA = "leer-conocido"
+
+
+def carpetas_conocidas(raiz, estado):
+    """Proyecto de Yema, su estado privado y lo que la persona declara en su configuración local."""
+    dirs = [raiz, estado]
+    local = raiz / ".claude/settings.local.json"
+    try:
+        dirs += [Path(os.path.expanduser(d)) for d in
+                 json.loads(local.read_text()).get("permissions", {}).get("additionalDirectories", [])]
+    except (OSError, ValueError):
+        pass
+    dirs += [Path(d) for d in os.environ.get("YEMA_CARPETAS", "").split(os.pathsep) if d]
+    return [Path(os.path.realpath(d)) for d in dirs]
+
+
+def rutas_de_lectura(cmd, cwd):
+    """Rutas que toca una lectura (argumentos, destinos de cd y el directorio de trabajo)."""
+    actual, rutas = cwd, []
+    for parte in cmd.split("&&"):
+        for tramo in parte.split("|"):
+            try:
+                toks = shlex.split(tramo.strip())
+            except ValueError:
+                return None
+            if toks and toks[0] == "cd" and len(toks) == 2:
+                actual = str(_real(toks[1], actual))
+                rutas.append(Path(actual))
+                continue
+            args = [t for t in toks[1:] if not t.startswith("-")]
+            rutas += [_real(t, actual) for t in args] if args else [_real(actual, actual)]
+    return rutas
+
+
+def lectura_en_conocidas(cmd, cwd, raiz, estado):
+    rutas = rutas_de_lectura(cmd, cwd)
+    dirs = carpetas_conocidas(raiz, estado)
+    return rutas is not None and all(any(_dentro(r, d) for d in dirs) for r in rutas)
+
+
 def lectura_encadenada(cmd, cwd, pol, raiz=None):
     """True si `cmd` es una cadena de lectores inertes unidos por && o |, con cd entre medias.
 
@@ -369,7 +409,7 @@ def _decidir(ev, raiz, ahora=None):
             return decidir_gobierno(args, ev, estado)
         lectura = sin_redireccion_inocua(entrada.get("command", ""))
         if lector_inerte(lectura, cwd, pol) or lectura_encadenada(lectura, cwd, pol, raiz):
-            return True, "", "leer"
+            return True, "", LECTURA_CONOCIDA if lectura_en_conocidas(lectura, cwd, raiz, estado) else "leer"
         if mkdir_en_zona_libre(entrada.get("command", ""), cwd, estado, pol):
             return True, "", "escribir"
         if any(ch in METACARACTERES for ch in entrada.get("command", "")):
@@ -435,7 +475,7 @@ def _decidir(ev, raiz, ahora=None):
 
 def efectos_usados(registro):
     return sum(1 for x in evidencia.leer(registro)
-               if x.get("permitido") is True and x.get("efecto") not in ("leer", "interno", "gobierno"))
+               if x.get("permitido") is True and x.get("efecto") not in ("leer", "interno", "gobierno", LECTURA_CONOCIDA))
 
 
 def evaluar_y_registrar(ev, raiz, ahora=None):
@@ -446,7 +486,7 @@ def evaluar_y_registrar(ev, raiz, ahora=None):
     c, _ = activo(raiz, _politica(raiz), ahora)
     cid = c["id"] if c else "sin-contrato"
     registro = estado_de(raiz, _politica(raiz)) / "evidencia" / f"{cid}.jsonl"
-    material = efecto not in ("leer", "interno")
+    material = efecto not in ("leer", "interno", LECTURA_CONOCIDA)
     if ok is PREGUNTAR:
         args = orden_de_gobierno(ev.get("tool_input", {}).get("command", ""), raiz, ev.get("cwd") or os.getcwd())
         tickets = estado_de(raiz, _politica(raiz)) / "aprobaciones"

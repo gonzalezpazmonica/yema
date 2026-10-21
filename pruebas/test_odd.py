@@ -211,6 +211,13 @@ class TestGarantiasPorElHookReal(unittest.TestCase):
         r = self.hook("Write", {"file_path": str(self.trabajo / "src/a.py")})
         self.assertEqual(json.loads(r.stdout)["hookSpecificOutput"]["permissionDecision"], "allow", r.stderr)
 
+    def test_lectura_conocida_sale_como_allow_y_la_desconocida_no(self):
+        r = self.hook("Bash", {"command": f"ls {RAIZ}/docs"})
+        self.assertEqual(json.loads(r.stdout)["hookSpecificOutput"]["permissionDecision"], "allow", r.stderr)
+        r = self.hook("Bash", {"command": "ls /etc"})
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(r.stdout.strip(), "")
+
     def test_garantias(self):
         casos = [
             ("leer sin contrato", "Read", {"file_path": str(self.trabajo / "src/a.py")}, 0),

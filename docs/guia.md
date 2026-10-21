@@ -10,6 +10,8 @@ python3 -m unittest discover -s pruebas
 yema cuidado
 ```
 
+Carpetas de trabajo: Yema lee sin preguntar (con sus órdenes de lectura validadas) dentro de su proyecto, su estado privado y las carpetas que declares en `additionalDirectories` de `.claude/settings.local.json` (o en `YEMA_CARPETAS`, separadas por `:`). Fuera de ahí, pregunta el arnés.
+
 Cúpulas (opcional): define `SAVIA_VAULTS_NODE`, `SAVIA_VAULTS_DIR` y `SAVIA_VAULTS_DOMES` si no usas las rutas por defecto de `.mcp.json`. Las cúpulas que puede leer sin contrato están en `gobierno/politica.json` (`cupulas_lectura`).
 
 ## 2. Primera conversación

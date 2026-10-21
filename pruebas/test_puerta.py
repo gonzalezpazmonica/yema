@@ -180,6 +180,24 @@ class TestPuerta(Entorno):
                     f"mkdir -p {self.yema}/memoria/x /tmp/y"):
             self.assertFalse(self.decide("Bash", {"command": cmd})[0], cmd)
 
+    def test_lectura_en_carpetas_conocidas_la_concede_la_puerta(self):
+        import os
+        os.environ["YEMA_CARPETAS"] = str(self.trabajo)
+        try:
+            for cmd in ("cd src && ls -R | head -5", "ls src", "find src -type f | wc -l"):
+                ok, motivo, efecto = self.decide("Bash", {"command": cmd})
+                self.assertTrue(ok, motivo)
+                self.assertEqual(efecto, "leer-conocido", cmd)
+            ok, _, efecto = self.decide("Bash", {"command": "ls /etc"})
+            self.assertTrue(ok)
+            self.assertEqual(efecto, "leer")  # fuera: decide el arnés
+            ok, _, efecto = self.decide("Bash", {"command": "cat src/a.py /etc/hostname"})
+            self.assertEqual(efecto, "leer")
+        finally:
+            del os.environ["YEMA_CARPETAS"]
+        ok, _, efecto = self.decide("Bash", {"command": "ls src"})
+        self.assertEqual(efecto, "leer")  # sin declarar, el trabajo no es conocido
+
     def test_diff_es_lectura(self):
         ok, motivo, efecto = self.decide("Bash", {"command": "diff -u src/a.py src/b.py"})
         self.assertTrue(ok, motivo)
