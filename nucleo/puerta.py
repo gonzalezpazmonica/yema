@@ -28,7 +28,7 @@ METACARACTERES = set(";|&`$<>()\n\\")
 PROTEGIDAS = ("nucleo", "gobierno", "contratos", "evidencia", ".claude")
 IDENTIDAD = ("AGENTS.md", "CLAUDE.md", "ALMA.md")
 GOBIERNO_LIBRE = {"estado", "validar", "resumen", "evidencia", "admitir", "suspender", "revocar", "cuidado", "copia",
-                  "checkpoint", "prueba"}
+                  "checkpoint", "prueba", "savia"}
 TRANSICIONES_LIBRES = {"borrador", "cuestionado", "candidato", "en_revision", "rechazado", "validando"}
 MODOS_SIN_PREGUNTA = {"bypassPermissions", "dontAsk", "auto"}
 # Lectores inertes: leen o listan, no escriben ni ejecutan otros programas. Sin ellos no hay E0 útil.
@@ -227,6 +227,27 @@ def mkdir_en_zona_libre(cmd, cwd, estado, pol):
 
 
 LECTURA_CONOCIDA = "leer-conocido"
+CORREO = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")
+IP = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
+
+
+def dato_privado_en(texto, pol):
+    """Motivo si una consulta que sale a la red lleva datos privados; None si no."""
+    if CORREO.search(texto):
+        return "un correo electrónico"
+    if IP.search(texto):
+        return "una dirección IP"
+    fichero = pol.get("terminos_privados")
+    if fichero:
+        try:
+            terminos = [t.strip().lower() for t in Path(os.path.expanduser(fichero)).read_text(encoding="utf-8").splitlines()]
+        except OSError:
+            terminos = []
+        bajo = texto.lower()
+        for t in terminos:
+            if t and t in bajo:
+                return "un término de la lista privada"
+    return None
 EJECUTA_PRUEBAS = re.compile(r"(^|[\s;&|(])(python3?\s+-m\s+(unittest|pytest)|pytest|cargo\s+test|npm\s+(run\s+)?test|"
                              r"go\s+test|bats|mvn\s+test|gradlew?\s+test)(\s|$)")
 
@@ -352,6 +373,7 @@ def _ruta_de(entrada):
 
 
 QUE_HACER = (
+    ("datos privados", "reformula la consulta en términos genéricos, sin nombres, correos, IP ni datos del proyecto."),
     ("ejecutar pruebas sin contrato", "usa «yema prueba <carpeta> -- <orden>» (copia aislada, sin red ni hogar; admite --parche)."),
     ("contrato no vigente", "propón un contrato (skill contrato) o pide a la persona que reanude el que hay."),
     ("sin contrato", "si ya tienes el contenido, guárdalo en tu memoria (~/.yema/memoria/, zona libre) para no perderlo; después propón un contrato (skill contrato) y pide su aprobación."),
@@ -463,6 +485,12 @@ def _decidir(ev, raiz, ahora=None):
                 return False, f"orden fuera del ámbito del contrato: {r}", efecto
         if not any(_orden_casa(norm, o.split()) for o in a.get("ordenes", [])):
             return False, f"orden no listada en el contrato: {' '.join(norm[:3])}", efecto
+    if efecto == "red" and herr in RED:
+        privado = dato_privado_en(" ".join(str(entrada.get(k, "")) for k in ("query", "url", "prompt")), pol)
+        if privado:
+            return False, f"la consulta a la red lleva datos privados ({privado})", efecto
+    if efecto == "escribir-cupula" and entrada.get("dome") not in c.get("contexto", {}).get("cupulas", []):
+        return False, f"cúpula no nombrada en el contrato para escribir: {entrada.get('dome')!r}", efecto
     if efecto in a.get("prohibidos", []):
         return False, f"efecto prohibido por el contrato: {efecto}", efecto
     if efecto not in a.get("efectos", []):

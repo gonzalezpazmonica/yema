@@ -1,0 +1,61 @@
+{
+  "id": "C-INVESTIGACION",
+  "version": 1,
+  "estado": "borrador",
+  "proposito": "Contrato marco de investigación: buscar y leer en la web y en las cúpulas nombradas para responder preguntas de la persona, dejando los informes en la memoria. No cambia nada fuera de la memoria.",
+  "responsable": "operadora",
+  "ejecutora": "yema",
+  "nivel": "E1",
+  "contexto": {
+    "cupulas": [
+      "SaviaDomains",
+      "savia-docs"
+    ],
+    "fuentes": [
+      "web pública",
+      "cúpulas nombradas"
+    ]
+  },
+  "ambito": {
+    "raiz": "/ruta/absoluta/al/estado/memoria",
+    "escritura": [
+      "*.md"
+    ],
+    "vetadas": []
+  },
+  "autoridad": {
+    "efectos": [
+      "leer",
+      "escribir",
+      "red"
+    ],
+    "prohibidos": [
+      "ejecutar",
+      "git-local",
+      "git-remoto",
+      "fusionar",
+      "publicar",
+      "escribir-cupula",
+      "delegar"
+    ],
+    "ordenes": [],
+    "caduca": "2030-01-01T00:00:00+00:00"
+  },
+  "recursos": {
+    "efectos_max": 300
+  },
+  "condiciones": {
+    "post": [
+      {
+        "id": "informe",
+        "descripcion": "cada informe en la memoria, con fuentes numeradas y nivel de confianza"
+      }
+    ]
+  },
+  "evidencia": {
+    "requerida": [
+      "recibo-decision",
+      "fuentes-citadas"
+    ]
+  }
+}

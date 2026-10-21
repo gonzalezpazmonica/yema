@@ -9,7 +9,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from apoyo_test import AHORA, RAIZ, Entorno, aprobado, base, politica  # noqa: E402,F401
+from apoyo_test import AHORA, RAIZ, Entorno, aprobado, base, politica, sellar  # noqa: E402,F401
 from nucleo import contrato, puerta  # noqa: E402
 
 
@@ -204,6 +204,37 @@ class TestPuerta(Entorno):
             ok, motivo, _ = self.decide("Bash", {"command": cmd})
             self.assertFalse(ok, cmd)
             self.assertIn("yema prueba", motivo, cmd)
+
+    def test_escribir_en_cupula_solo_en_las_nombradas(self):
+        c = aprobado(self.trabajo)
+        c["autoridad"]["efectos"].append("escribir-cupula")
+        c["contexto"] = {"cupulas": ["CupulaA"]}
+        c = sellar(c)
+        self.activar(c)
+        self.assertTrue(self.decide("mcp__savia-vaults__vault_write", {"dome": "CupulaA", "path": "n.md"})[0])
+        ok, motivo, _ = self.decide("mcp__savia-vaults__vault_write", {"dome": "CupulaB", "path": "n.md"})
+        self.assertFalse(ok)
+        self.assertIn("cúpula", motivo)
+        self.assertFalse(self.decide("mcp__savia-vaults__vault_write", {"path": "n.md"})[0])
+
+    def test_busquedas_web_sin_datos_privados(self):
+        privados = self.yema / "memoria/privado.txt"
+        privados.write_text("ProyectoSecreto\nAcme Interna\n")
+        import json as _j
+        pol = politica()
+        pol["terminos_privados"] = str(privados)
+        (self.yema / "gobierno/politica.json").write_text(_j.dumps(pol))
+        c = aprobado(self.trabajo)
+        c["autoridad"]["efectos"].append("red")
+        c["autoridad"]["prohibidos"] = ["fusionar", "publicar"]
+        self.activar(sellar(c))
+        self.assertTrue(self.decide("WebSearch", {"query": "bubblewrap user namespaces ubuntu 24.04"})[0])
+        for q in ("estado de proyectosecreto en producción", "contacto ana@empresa.es", "servidor 10.0.3.17 caído",
+                  "migración Acme Interna"):
+            ok, motivo, _ = self.decide("WebSearch", {"query": q})
+            self.assertFalse(ok, q)
+            self.assertIn("privad", motivo)
+        self.assertFalse(self.decide("WebFetch", {"url": "https://x.org/?q=ProyectoSecreto", "prompt": "p"})[0])
 
     def test_diff_es_lectura(self):
         ok, motivo, efecto = self.decide("Bash", {"command": "diff -u src/a.py src/b.py"})

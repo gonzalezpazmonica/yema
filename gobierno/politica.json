@@ -12,8 +12,7 @@
     "memoria/*"
   ],
   "cupulas_lectura": [
-    "savia-docs",
-    "SaviaLearning"
+    "SaviaDomains"
   ],
   "lectura_vetada": [
     "~/.ssh/*",
@@ -33,5 +32,7 @@
   "descanso": {
     "desde": 23,
     "hasta": 8
-  }
+  },
+  "savia": "~/savia",
+  "terminos_privados": "~/.yema/terminos-privados.txt"
 }

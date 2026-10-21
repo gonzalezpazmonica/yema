@@ -11,6 +11,7 @@
     yema aprobar <id> <huella8>           aprueba y activa (solo una persona)
     yema prueba <carpeta> [--parche f.diff] -- <orden>
                                           ejecuta en una copia aislada (sin red, sin hogar)
+    yema savia <palabras…>                busca en el mapa de capacidades de Savia (.scm/INDEX.scm)
     yema cuidado                          salud: permisos, copias, disco, descanso
     yema copia                            copia del estado privado (rota las viejas)
 
@@ -61,6 +62,9 @@ def main(argv=None, raiz=None, tty=None):
     s.add_parser("evidencia").add_argument("id")
     s.add_parser("resumen").add_argument("id")
     s.add_parser("cuidado")
+    sv = s.add_parser("savia")
+    sv.add_argument("palabras", nargs="+")
+    sv.add_argument("--max", type=int, default=12)
     s.add_parser("checkpoint").add_argument("id")
     pr = s.add_parser("prueba")
     pr.add_argument("carpeta")
@@ -113,6 +117,8 @@ def main(argv=None, raiz=None, tty=None):
         return _prueba(a, raiz, codigo, pol)
     if a.orden == "instalar":
         return _instalar(codigo, raiz, Path(a.bin))
+    if a.orden == "savia":
+        return _savia(a, pol)
     if a.orden == "cuidado":
         res = cuidado.chequeos(raiz, pol)
         for nivel, clave, msg in res:
@@ -183,11 +189,39 @@ def _prueba(a, raiz, codigo, pol):
     return r["rc"]
 
 
+def _savia(a, pol):
+    """Busca capacidades de Savia en su índice perezoso y devuelve rutas absolutas para usarlas con el relevo."""
+    savia = Path(os.path.expanduser(pol.get("savia", "~/savia")))
+    indice = savia / ".scm/INDEX.scm"
+    if not indice.exists():
+        print(f"no encuentro el índice de Savia en {indice} (define «savia» en la política)", file=sys.stderr)
+        return 2
+    palabras = [p.lower() for p in a.palabras]
+    resultados = []
+    for linea in indice.read_text(encoding="utf-8").splitlines():
+        if not linea.startswith("["):
+            continue
+        puntos = sum(linea.lower().count(p) for p in palabras)
+        if puntos:
+            resultados.append((puntos, linea))
+    if not resultados:
+        print("sin resultados")
+        return 1
+    for _, linea in sorted(resultados, key=lambda x: -x[0])[:a.max]:
+        tipo, _, ruta = linea.rpartition(" — ")[2].partition(":")
+        print(f"{linea.split(' — ')[0]} · {tipo}: {savia / ruta}")
+    return 0
+
+
 def _instalar(codigo, estado, bindir):
     """Prepara el estado privado, los ajustes locales del arnés y la CLI en el PATH."""
     for d in ("contratos/borradores", "evidencia", "memoria", "buzon/entrada", "buzon/salida", "casa", "aprobaciones"):
         (estado / d).mkdir(parents=True, exist_ok=True)
     os.chmod(estado, 0o700)
+    privados = estado / "terminos-privados.txt"
+    if not privados.exists():
+        privados.write_text("# Un término por línea: nombres de proyectos, clientes o personas que nunca deben salir en una búsqueda web.\n")
+        os.chmod(privados, 0o600)
     local = codigo / ".claude/settings.local.json"
     ajustes = json.loads(local.read_text()) if local.exists() else {}
     dirs = ajustes.setdefault("permissions", {}).setdefault("additionalDirectories", [])
