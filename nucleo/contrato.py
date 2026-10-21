@@ -115,3 +115,23 @@ def vigente(c, politica, ahora=None):
     if not cad or _fecha(cad) <= ahora:
         return False, "contrato no vigente: caducado o sin caducidad"
     return True, ""
+
+
+def resumen(c):
+    """El contrato en lenguaje llano, para que una persona sepa qué aprueba."""
+    a, amb, r = c.get("autoridad", {}), c.get("ambito", {}), c.get("recursos", {})
+    lineas = [
+        f"Contrato {c.get('id')} v{c.get('version')} · nivel {c.get('nivel')} · huella {huella(c)[:8]}",
+        f"Para qué: {c.get('proposito')}",
+        f"Dónde: {amb.get('raiz')}",
+        f"Puede: {', '.join(a.get('efectos', [])) or 'nada'}",
+        f"Puede escribir en: {', '.join(amb.get('escritura', [])) or 'ningún sitio'}",
+        f"Órdenes: {'; '.join(a.get('ordenes', [])) or 'ninguna'}",
+        f"No puede: {', '.join(a.get('prohibidos', [])) or '—'}"
+        + (f" · nunca en: {', '.join(amb.get('vetadas', []))}" if amb.get("vetadas") else ""),
+        f"Presupuesto: {r.get('efectos_max', 0)} efectos · Caduca: {a.get('caduca')}",
+    ]
+    post = [p.get("id", "") for p in c.get("condiciones", {}).get("post", [])]
+    if post:
+        lineas.append(f"Al cerrar demostrará: {', '.join(post)}")
+    return "\n".join(lineas)

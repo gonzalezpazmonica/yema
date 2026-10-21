@@ -28,5 +28,10 @@
     ".env.*",
     "*.pem",
     "*.key"
-  ]
+  ],
+  "copias": "~/.yema-copias",
+  "descanso": {
+    "desde": 23,
+    "hasta": 8
+  }
 }

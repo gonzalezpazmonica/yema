@@ -40,7 +40,7 @@ borrador → cuestionado → candidato → en_revision → aprobado → aprovisi
 
 - Aprobar exige una aprobadora de `gobierno/politica.json` distinta de la ejecutora.
 - La aprobación sella la **huella** del contenido. Cualquier cambio material posterior invalida el contrato: hace falta versión nueva y aprobación nueva.
-- Aprobar y activar exige terminal interactiva (`nucleo/yema.py`). Es una barrera débil; la v1 la sustituye por firma (ver ROADMAP).
+- Aprobar y activar (`yema aprobar <id> <huella>`) lo hace una persona: o en su terminal, o contestando el diálogo de permisos del arnés cuando Yema lo pide en la conversación. La puerta responde «preguntar» (nunca «permitir») a esa orden, deja un ticket de un solo uso que caduca en 5 minutos y deniega en los modos que no preguntan. La v1 añadirá firma (ver ROADMAP).
 
 ## Garantías y dónde se cumplen
 
@@ -59,5 +59,5 @@ borrador → cuestionado → candidato → en_revision → aprobado → aprovisi
 
 - Una orden permitida puede hacer más de lo que su nombre sugiere (`python3 -m unittest` ejecuta código del repo). La frontera fuerte es el sistema operativo: en Space, el sandbox del modo mediado.
 - La puerta solo ve lo que el arnés le enseña. Si el arnés no pasa una herramienta por el hook, no la controla.
-- La terminal interactiva no prueba que sea una persona. La firma llega en la v1.
+- El diálogo y la terminal prueban que alguien con acceso a la sesión contestó, no quién. La firma llega en la v1.
 - El presupuesto cuenta efectos, no tokens: el arnés no expone el consumo al hook.

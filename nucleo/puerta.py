@@ -8,7 +8,9 @@ import fnmatch
 import json
 import os
 import shlex
+import shutil
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -24,6 +26,22 @@ CUPULA_ESCRITURA = {"vault_write", "vault_rag_sync", "vault_index"}
 METACARACTERES = set(";|&`$<>()\n\\")
 PROTEGIDAS = ("nucleo", "gobierno", "contratos", "evidencia", ".claude")
 IDENTIDAD = ("AGENTS.md", "CLAUDE.md", "ALMA.md")
+GOBIERNO_LIBRE = {"estado", "validar", "resumen", "evidencia", "admitir", "suspender", "revocar", "cuidado", "copia"}
+TRANSICIONES_LIBRES = {"borrador", "cuestionado", "candidato", "en_revision", "rechazado", "validando"}
+MODOS_SIN_PREGUNTA = {"bypassPermissions", "dontAsk", "auto"}
+
+
+class _Preguntar:
+    """Decisión «pregunta a la persona». Es falsa: quien no la entienda, deniega."""
+
+    def __bool__(self):
+        return False
+
+    def __repr__(self):
+        return "PREGUNTAR"
+
+
+PREGUNTAR = _Preguntar()
 EJECUTABLES_ESTADO = ("casa/*",)
 PUSH_PELIGROSO = ("-f", "--force", "--force-with-lease", "--mirror", "--all", "--delete", "-d", "--prune")
 
@@ -134,6 +152,54 @@ def clasificar_orden(cmd):
     return "ejecutar", norm, rutas
 
 
+def orden_de_gobierno(cmd, raiz, cwd):
+    """Argumentos de la CLI de Yema si `cmd` la invoca de verdad; si no, None."""
+    if any(ch in METACARACTERES for ch in cmd):
+        return None
+    try:
+        toks = shlex.split(cmd)
+    except ValueError:
+        return None
+    cli, envoltorio = raiz / "nucleo/yema.py", raiz / "bin/yema"
+    if len(toks) > 1 and os.path.basename(toks[0]) in ("python3", "python") and _real(toks[1], cwd) == cli:
+        return toks[2:]
+    if toks and "/" in toks[0] and _real(toks[0], cwd) == envoltorio:
+        return toks[1:]
+    if toks and toks[0] == "yema":
+        en_path = shutil.which("yema")
+        if en_path and Path(os.path.realpath(en_path)) == envoltorio:
+            return toks[1:]
+    return None
+
+
+def _contrato_de_gobierno(estado, cid):
+    if not cid or "/" in cid:
+        return None
+    for ruta in (estado / "contratos" / f"{cid}.json", estado / "contratos/borradores" / f"{cid}.json"):
+        if ruta.exists():
+            return contrato.cargar(ruta)
+    return None
+
+
+def decidir_gobierno(args, ev, estado):
+    sub = args[0] if args else ""
+    if sub in GOBIERNO_LIBRE:
+        return True, "", "gobierno"
+    if sub == "transicion" and len(args) > 2 and args[2] in TRANSICIONES_LIBRES:
+        return True, "", "gobierno"
+    if sub == "aprobar" and len(args) >= 3:
+        if ev.get("permission_mode") in MODOS_SIN_PREGUNTA:
+            return False, (f"aprobar exige que la persona conteste un diálogo; el modo "
+                           f"{ev.get('permission_mode')} no pregunta. Cambia a modo normal."), "gobierno"
+        c = _contrato_de_gobierno(estado, args[1])
+        if c is None:
+            return False, f"no encuentro el contrato {args[1]}", "gobierno"
+        if contrato.huella(c)[:8] != args[2]:
+            return False, "la huella no casa con el contrato: alguien lo cambió después de enseñártelo", "gobierno"
+        return PREGUNTAR, "Yema pide aprobar y activar este contrato:\n" + contrato.resumen(c), "gobierno"
+    return False, "esa orden de gobierno es de la persona (aprobar con diálogo o en su terminal)", "gobierno"
+
+
 def efecto_de(herramienta, entrada):
     if herramienta in INTERNAS:
         return "interno"
@@ -169,6 +235,10 @@ def decidir(ev, raiz, ahora=None):
         return False, f"herramienta desconocida: {herr}", None
     if efecto == "interno":
         return True, "", efecto
+    if efecto == "bash":
+        args = orden_de_gobierno(entrada.get("command", ""), raiz, cwd)
+        if args is not None:
+            return decidir_gobierno(args, ev, estado)
     c, motivo_c = activo(raiz, pol, ahora)
     ruta = _ruta_de(entrada)
     real = _real(ruta, cwd) if ruta else None
@@ -235,14 +305,20 @@ def evaluar_y_registrar(ev, raiz, ahora=None):
     cid = c["id"] if c else "sin-contrato"
     registro = estado_de(raiz, _politica(raiz)) / "evidencia" / f"{cid}.jsonl"
     material = efecto not in ("leer", "interno")
-    if ok and material and c:
+    if ok is PREGUNTAR:
+        args = orden_de_gobierno(ev.get("tool_input", {}).get("command", ""), raiz, ev.get("cwd") or os.getcwd())
+        tickets = estado_de(raiz, _politica(raiz)) / "aprobaciones"
+        tickets.mkdir(parents=True, exist_ok=True)
+        (tickets / f"{args[1]}-{args[2]}.json").write_text(json.dumps({"ts": time.time()}))
+    elif ok and material and c and efecto != "gobierno":
         usados = sum(1 for x in evidencia.leer(registro) if x.get("permitido") and x.get("efecto") not in ("leer", "interno"))
         if usados >= c["recursos"].get("efectos_max", 0):
             ok, motivo = False, f"presupuesto de efectos agotado ({usados})"
     if material or not ok:
         evidencia.anotar(registro, {"contrato": cid, "version": c["version"] if c else None,
                                     "herramienta": ev.get("tool_name"), "efecto": efecto,
-                                    "permitido": ok, "motivo": motivo})
+                                    "permitido": "preguntado" if ok is PREGUNTAR else ok,
+                                    "motivo": motivo.splitlines()[0] if motivo else ""})
     return ok, motivo, efecto
 
 
@@ -254,6 +330,10 @@ def main():
     except Exception as e:  # falla cerrado
         print(f"YEMA: puerta en error, bloqueo: {e}", file=sys.stderr)
         return 2
+    if ok is PREGUNTAR:
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "ask",
+                                                 "permissionDecisionReason": motivo}}, ensure_ascii=False))
+        return 0
     if not ok:
         print(f"YEMA: {motivo}", file=sys.stderr)
         return 2

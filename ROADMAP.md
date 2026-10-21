@@ -4,8 +4,9 @@ Cada fase tiene criterio de salida y criterio de abandono. Si una hipótesis fal
 
 ## F0 · Nacimiento — hecho
 
-Núcleo (contrato, puerta, evidencia, CLI) con 42 pruebas, incluidas las negativas, y mutaciones comprobadas.
-Alma, gobernanza, criterio, arquitectura, comunicación, casa y poda escritas. Contrato de ejemplo en `ejemplos/`; los reales, en el estado privado.
+Núcleo (contrato, puerta, evidencia, CLI) con 71 pruebas, incluidas las negativas, y mutaciones comprobadas.
+Gobierno por conversación (aprobar con el diálogo nativo), cuidado (`yema cuidado`, `yema copia`), skills `contrato`, `cuidado` y `relevo-savia`.
+Alma, gobernanza, criterio, arquitectura, comunicación, conversación, seguridad, relevo, cuidado, casa y poda escritas. Contrato de ejemplo en `ejemplos/`; los reales, en el estado privado.
 
 ## F1 · Línea base y poda
 

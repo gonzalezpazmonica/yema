@@ -132,6 +132,9 @@ class TestPuerta(Entorno):
         cmd = f"python3 {self.yema}/nucleo/yema.py transicion C-0001 aprobado --por operadora"
         ok, motivo, _ = self.decide("Bash", {"command": cmd})
         self.assertFalse(ok)
+        self.assertIn("persona", motivo)
+        ok, motivo, _ = self.decide("Bash", {"command": f"python3 {self.yema}/nucleo/puerta.py"})
+        self.assertFalse(ok)
         self.assertIn("núcleo", motivo)
         self.assertTrue(self.decide("Bash", {"command": "python3 src/a.py"})[0])
 

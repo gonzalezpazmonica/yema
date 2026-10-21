@@ -1,0 +1,3 @@
+#!/bin/sh
+# Envoltorio de la CLI de gobierno de Yema: enlázalo en tu PATH como «yema».
+exec python3 "$(dirname "$(readlink -f "$0")")/../nucleo/yema.py" "$@"
