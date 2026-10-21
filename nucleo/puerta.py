@@ -5,6 +5,7 @@ exit 2 bloquea con el motivo en stderr. Cualquier error bloquea.
 Sin contrato vigente solo se permiten los efectos de `efectos_sin_contrato`.
 """
 import fnmatch
+import glob
 import json
 import re
 import os
@@ -16,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from nucleo import contrato, evidencia  # noqa: E402
+from nucleo import contrato, evidencia, firma  # noqa: E402
 
 INTERNAS = {"TodoWrite", "AskUserQuestion", "ToolSearch", "EnterPlanMode", "ExitPlanMode", "ListAgents", "Skill"}
 LECTURA = {"Read", "Glob", "Grep", "LS", "NotebookRead"}
@@ -84,6 +85,8 @@ def activo(raiz, pol, ahora):
         return None, "contrato no vigente: ACTIVO apunta a un contrato inexistente"
     c = contrato.cargar(ruta)
     ok, motivo = contrato.vigente(c, pol, ahora)
+    if ok and pol.get("firma_aprobacion") and not firma.verificar(c, firma.clave(raiz)):
+        ok, motivo = False, "contrato no vigente: la aprobación no tiene una firma válida"
     return (c, "") if ok else (None, motivo)
 
 
@@ -113,11 +116,32 @@ def _orden_casa(norm, patron):
 
 
 def _vetada(real, pol):
+    if firma.CARPETA in Path(real).parts:
+        return True  # la clave de aprobación nunca entra en el contexto
     for g in pol.get("lectura_vetada", []):
         g = os.path.expanduser(g)
         if fnmatch.fnmatch(str(real), g) or ("/" not in g and fnmatch.fnmatch(real.name, g)):
             return True
+    if any(ch in str(real) for ch in "*?["):
+        # Un comodín se expande al ejecutar: se juzga también lo que abriría, no solo el texto.
+        return any(_vetada(Path(os.path.realpath(x)), pol) for x in glob.glob(str(real)))
     return False
+
+
+def _vetada_dentro(carpeta, pol, estado):
+    """Primera zona vetada que cuelga de la carpeta (Grep lee contenido recursivamente); None si ninguna."""
+    carpeta = Path(carpeta)
+    zonas = [Path(os.path.realpath(estado)) / firma.CARPETA]
+    for g in pol.get("lectura_vetada", []):
+        g = os.path.expanduser(g)
+        if "/" not in g:
+            continue  # patrones por nombre (*.env): se juzgan fichero a fichero
+        fijo = re.split(r"[*?\[]", g, maxsplit=1)[0]
+        zonas.append(Path(os.path.realpath(fijo if fijo.endswith("/") else os.path.dirname(fijo) or "/")))
+    for z in zonas:
+        if z == carpeta or carpeta in z.parents:
+            return z
+    return None
 
 
 def clasificar_orden(cmd):
@@ -464,6 +488,10 @@ def _decidir(ev, raiz, ahora=None):
     if efecto == "leer":
         if real and _vetada(real, pol):
             return False, f"lectura vetada por la política: {real}", efecto
+        if herr == "Grep":
+            dentro = _vetada_dentro(real or Path(os.path.realpath(cwd)), pol, estado_de(raiz, pol))
+            if dentro:
+                return False, f"lectura vetada: la búsqueda abarca {dentro}; acota «path» a otra carpeta", efecto
         return True, "", efecto
 
     if efecto == "escribir":

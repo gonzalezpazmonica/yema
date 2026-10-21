@@ -34,5 +34,6 @@
     "hasta": 8
   },
   "savia": "~/savia",
-  "terminos_privados": "~/.yema/terminos-privados.txt"
+  "terminos_privados": "~/.yema/terminos-privados.txt",
+  "firma_aprobacion": true
 }
