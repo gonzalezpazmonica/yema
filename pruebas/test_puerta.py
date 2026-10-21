@@ -153,12 +153,21 @@ class TestPuerta(Entorno):
             self.assertTrue(ok, f"{cmd}: {motivo}")
             self.assertEqual(efecto, "leer")
 
+    def test_redirecciones_inocuas_en_lecturas(self):
+        for cmd in ("find src -type f 2>/dev/null | head -20", "ls -la src 2>&1", "cd src && grep -n foo a.py 2>&1 | head"):
+            ok, motivo, efecto = self.decide("Bash", {"command": cmd})
+            self.assertTrue(ok, f"{cmd}: {motivo}")
+            self.assertEqual(efecto, "leer")
+        for cmd in ("cat src/a.py 2>/tmp/x", "ls 2> /tmp/x", "ls >/dev/null 2>&1 && touch x", "cat a 1>&2 > b",
+                    "ls 2>&1 > x"):
+            self.assertFalse(self.decide("Bash", {"command": cmd})[0], cmd)
+
     def test_cadenas_que_no_solo_leen(self):
         import os
         ssh = os.path.expanduser("~/.ssh")
         for cmd in (f"cd {ssh} && cat id_ed25519", f"cd {ssh} && grep -n x id_ed25519", "cd src && touch x",
                     "ls || touch x", "ls & touch x", "ls | sh", "ls && ls; touch x", "cd src && cd .. && sed -i x a",
-                    "find . | xargs cat", "cat src/a.py 2>&1 | head", "cd", "cd src extra && ls"):
+                    "find . | xargs cat", "cat src/a.py 2>&1 > x", "cd", "cd src extra && ls"):
             self.assertFalse(self.decide("Bash", {"command": cmd})[0], cmd)
 
     def test_lectores_inertes_sin_contrato(self):

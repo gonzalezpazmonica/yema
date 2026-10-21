@@ -6,6 +6,7 @@ Sin contrato vigente solo se permiten los efectos de `efectos_sin_contrato`.
 """
 import fnmatch
 import json
+import re
 import os
 import shlex
 import shutil
@@ -199,6 +200,15 @@ def lector_inerte(cmd, cwd, pol):
 SEPARADORES_LECTURA = set(";`$<>()\n\\")
 
 
+REDIRECCION_INOCUA = re.compile(r"\s2>(&1|/dev/null)(?=\s|\||$)")
+
+
+def sin_redireccion_inocua(cmd):
+    """Quita «2>&1» y «2>/dev/null» (solo los errores, a la salida o a la nada). Cualquier otra
+    redirección se queda y hace que la orden se rechace."""
+    return REDIRECCION_INOCUA.sub("", cmd)
+
+
 def lectura_encadenada(cmd, cwd, pol):
     """True si `cmd` es una cadena de lectores inertes unidos por && o |, con cd entre medias.
 
@@ -336,7 +346,8 @@ def _decidir(ev, raiz, ahora=None):
         args = orden_de_gobierno(entrada.get("command", ""), raiz, cwd)
         if args is not None:
             return decidir_gobierno(args, ev, estado)
-        if lector_inerte(entrada.get("command", ""), cwd, pol) or lectura_encadenada(entrada.get("command", ""), cwd, pol):
+        lectura = sin_redireccion_inocua(entrada.get("command", ""))
+        if lector_inerte(lectura, cwd, pol) or lectura_encadenada(lectura, cwd, pol):
             return True, "", "leer"
         if any(ch in METACARACTERES for ch in entrada.get("command", "")):
             return False, "orden compuesta, con redirección o sustitución: pártela en órdenes simples", "bash"

@@ -11,6 +11,17 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/nucleo/arranque.py",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   },
   "permissions": {
