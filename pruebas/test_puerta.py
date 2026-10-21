@@ -236,6 +236,19 @@ class TestPuerta(Entorno):
             self.assertIn("privad", motivo)
         self.assertFalse(self.decide("WebFetch", {"url": "https://x.org/?q=ProyectoSecreto", "prompt": "p"})[0])
 
+    def test_cupulas_con_el_parametro_vault_del_servidor(self):
+        ok, motivo, efecto = self.decide("mcp__savia-vaults__vault_search", {"query": "x", "vault": "savia-docs"})
+        self.assertTrue(ok, motivo)
+        self.assertEqual(efecto, "leer-conocido")  # permitida por la política: la puerta la concede al arnés
+        self.assertFalse(self.decide("mcp__savia-vaults__vault_search", {"query": "x", "vault": "CupulaPrivada"})[0])
+        ok, motivo, _ = self.decide("mcp__savia-vaults__vault_search", {"query": "x"})
+        self.assertFalse(ok)
+        self.assertIn("vault", motivo)
+
+    def test_listar_cupulas_no_necesita_cupula(self):
+        ok, motivo, efecto = self.decide("mcp__savia-vaults__vault_domes", {})
+        self.assertTrue(ok, motivo)
+
     def test_diff_es_lectura(self):
         ok, motivo, efecto = self.decide("Bash", {"command": "diff -u src/a.py src/b.py"})
         self.assertTrue(ok, motivo)

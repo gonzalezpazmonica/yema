@@ -4,7 +4,7 @@ Cada fase tiene criterio de salida y criterio de abandono. Si una hipótesis fal
 
 ## F0 · Nacimiento — hecho
 
-Núcleo (contrato, puerta, evidencia, CLI) con 129 pruebas, incluidas las negativas, y mutaciones comprobadas.
+Núcleo (contrato, puerta, evidencia, CLI) con 131 pruebas, incluidas las negativas, y mutaciones comprobadas.
 Gobierno por conversación (aprobar con el diálogo nativo), cuidado (`yema cuidado`, `yema copia`), skills `contrato`, `cuidado` y `relevo-savia`. Ideas de ODD con control en código: prueba de reanudación, cuatro estados, checkpoint con forma fija, tests preexistentes intocables, rechazos que dicen qué hacer y garantías probadas por el hook real.
 Alma, gobernanza, criterio, arquitectura, comunicación, conversación, seguridad, relevo, cuidado, casa y poda escritas. Contrato de ejemplo en `ejemplos/`; los reales, en el estado privado.
 

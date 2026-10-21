@@ -23,6 +23,14 @@ LECTURA = {"Read", "Glob", "Grep", "LS", "NotebookRead"}
 ESCRITURA = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 RED = {"WebFetch", "WebSearch"}
 DELEGACION = {"Agent", "Task", "SendMessage"}
+CUPULA_METADATOS = {"vault_domes", "vault_health", "vault_rag_status"}
+
+
+def cupula_de(entrada):
+    """El servidor de cúpulas llama «vault» al parámetro; se acepta también «dome»."""
+    return entrada.get("vault") or entrada.get("dome")
+
+
 CUPULA_ESCRITURA = {"vault_write", "vault_rag_sync", "vault_index"}
 METACARACTERES = set(";|&`$<>()\n\\")
 PROTEGIDAS = ("nucleo", "gobierno", "contratos", "evidencia", ".claude")
@@ -389,7 +397,7 @@ QUE_HACER = (
     ("test preexistente", "si el código está mal, arregla el código; si el test está mal, propón una enmienda que lo liste en ambito.pruebas_editables."),
     ("fuera del ámbito", "trabaja dentro del ámbito o propón una enmienda que lo amplíe."),
     ("ruta no concedida", "trabaja en las rutas concedidas o propón una enmienda que añada esa."),
-    ("cúpula", "indica una cúpula permitida en «dome» o pide que el contrato la nombre."),
+    ("cúpula", "indica una cúpula permitida en el parámetro «vault» (las sin contrato: las de cupulas_lectura de la política) o pide un contrato que la nombre."),
     ("herramienta desconocida", "usa otra herramienta: esta no está clasificada en la puerta."),
     ("presupuesto", "cierra lo que tengas, deja checkpoint y propón una enmienda con más presupuesto."),
     ("orden de gobierno", "enseña el resumen del contrato a la persona y lanza «yema aprobar <id> <huella>»."),
@@ -446,11 +454,13 @@ def _decidir(ev, raiz, ahora=None):
     real = _real(ruta, cwd) if ruta else None
 
     if efecto == "leer" and herr.startswith("mcp__"):
+        if herr.split("__")[-1] in CUPULA_METADATOS:
+            return True, "", LECTURA_CONOCIDA  # solo nombres y niveles, ningún contenido
         # Sin cúpula explícita el servidor asume N2: Yema razona en la nube y no la lee.
         permitidas = set(pol.get("cupulas_lectura", [])) | set((c or {}).get("contexto", {}).get("cupulas", []))
-        if entrada.get("dome") not in permitidas:
-            return False, f"cúpula no permitida o sin indicar: {entrada.get('dome')!r}", efecto
-        return True, "", efecto
+        if cupula_de(entrada) not in permitidas:
+            return False, f"cúpula no permitida o sin indicar: {cupula_de(entrada)!r}", efecto
+        return True, "", LECTURA_CONOCIDA
     if efecto == "leer":
         if real and _vetada(real, pol):
             return False, f"lectura vetada por la política: {real}", efecto
@@ -489,8 +499,8 @@ def _decidir(ev, raiz, ahora=None):
         privado = dato_privado_en(" ".join(str(entrada.get(k, "")) for k in ("query", "url", "prompt")), pol)
         if privado:
             return False, f"la consulta a la red lleva datos privados ({privado})", efecto
-    if efecto == "escribir-cupula" and entrada.get("dome") not in c.get("contexto", {}).get("cupulas", []):
-        return False, f"cúpula no nombrada en el contrato para escribir: {entrada.get('dome')!r}", efecto
+    if efecto == "escribir-cupula" and cupula_de(entrada) not in c.get("contexto", {}).get("cupulas", []):
+        return False, f"cúpula no nombrada en el contrato para escribir: {cupula_de(entrada)!r}", efecto
     if efecto in a.get("prohibidos", []):
         return False, f"efecto prohibido por el contrato: {efecto}", efecto
     if efecto not in a.get("efectos", []):

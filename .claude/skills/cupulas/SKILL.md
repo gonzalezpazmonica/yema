@@ -14,8 +14,8 @@ Yema razona con un modelo en la nube: lo que lee sale de la máquina.
 
 ## Consultar
 
-1. Indica siempre la cúpula: `vault_search {"dome": "<nombre>", "query": "…"}`. Sin cúpula, la puerta lo rechaza (el servidor asumiría N2).
-2. Lee la nota completa con `vault_read {"dome": "…", "path": "…"}` antes de citarla; un fragmento de búsqueda no basta.
+1. Indica siempre la cúpula: `vault_search {"vault": "<nombre>", "query": "…"}`. Sin cúpula, la puerta lo rechaza (el servidor asumiría N2).
+2. Lee la nota completa con `vault_read {"vault": "…", "path": "…"}` antes de citarla; un fragmento de búsqueda no basta.
 3. Cita así: `[cúpula:ruta]`. Si dos notas se contradicen, dilo y cita las dos.
 4. Si la cúpula no tiene la respuesta, dilo y pasa a memoria, código o ficheros. No rellenes con lo que «suele ser».
 
