@@ -21,7 +21,8 @@ En E3 cada efecto lo decide ella (merge, publicación).
 ## Contrato (v0, JSON)
 
 Campos obligatorios: `id`, `version`, `estado`, `proposito`, `responsable`, `ejecutora`, `nivel`, `ambito`, `autoridad`, `recursos`, `evidencia`.
-Opcionales: `contexto` (cúpulas permitidas, fuentes), `spec`, `condiciones` (`pre`, `invariantes`, `post`).
+Opcionales: `contexto` (cúpulas permitidas, fuentes), `spec`, `condiciones` (`pre`, `invariantes`, `post`), `peticion` (las palabras exactas de la persona) y `requisitos` (`[{id: "S1", cita: "frase literal", post: ["id de postcondición"]}]`: cada requisito cita a la persona y apunta a cómo se demostrará; el validador rechaza citas vacías y postcondiciones inexistentes).
+- `ambito.pruebas` / `ambito.pruebas_editables`: los tests que ya existían y casan con `pruebas` no se pueden modificar salvo que estén en `pruebas_editables`. Los tests nuevos, sí.
 
 - `ambito.raiz`: directorio absoluto donde se trabaja. `ambito.escritura` / `ambito.vetadas`: globs relativos.
 - `autoridad.efectos` / `autoridad.prohibidos`: de `leer, escribir, ejecutar, red, git-local, git-remoto, fusionar, publicar, delegar, escribir-cupula`.

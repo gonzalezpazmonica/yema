@@ -32,6 +32,10 @@
       "*.env",
       "*secret*",
       "packaging/*"
+    ],
+    "pruebas": [
+      "crates/*/src/*.test.rs",
+      "apps/*/src/*.test.ts"
     ]
   },
   "autoridad": {
@@ -117,5 +121,22 @@
   "enmiendas_previstas": [
     "Push y PR con credencial acotada: versión posterior.",
     "Varias raíces (worktrees por rama)."
+  ],
+  "peticion": "Integra las ramas ya revisadas y averigua por qué falla el test de enlaces, sin publicar nada.",
+  "requisitos": [
+    {
+      "id": "S1",
+      "cita": "Integra las ramas ya revisadas",
+      "post": [
+        "verificado"
+      ]
+    },
+    {
+      "id": "S2",
+      "cita": "sin publicar nada",
+      "post": [
+        "evidencia"
+      ]
+    }
   ]
 }

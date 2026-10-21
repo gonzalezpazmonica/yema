@@ -26,7 +26,8 @@ CUPULA_ESCRITURA = {"vault_write", "vault_rag_sync", "vault_index"}
 METACARACTERES = set(";|&`$<>()\n\\")
 PROTEGIDAS = ("nucleo", "gobierno", "contratos", "evidencia", ".claude")
 IDENTIDAD = ("AGENTS.md", "CLAUDE.md", "ALMA.md")
-GOBIERNO_LIBRE = {"estado", "validar", "resumen", "evidencia", "admitir", "suspender", "revocar", "cuidado", "copia"}
+GOBIERNO_LIBRE = {"estado", "validar", "resumen", "evidencia", "admitir", "suspender", "revocar", "cuidado", "copia",
+                  "checkpoint"}
 TRANSICIONES_LIBRES = {"borrador", "cuestionado", "candidato", "en_revision", "rechazado", "validando"}
 MODOS_SIN_PREGUNTA = {"bypassPermissions", "dontAsk", "auto"}
 
@@ -222,8 +223,49 @@ def _ruta_de(entrada):
     return entrada.get("file_path") or entrada.get("notebook_path") or entrada.get("path")
 
 
+QUE_HACER = (
+    ("contrato no vigente", "propón un contrato (skill contrato) o pide a la persona que reanude el que hay."),
+    ("sin contrato", "propón un contrato (skill contrato) y pide su aprobación."),
+    ("zona protegida", "eso solo lo cambia una persona; si hace falta, díselo con el porqué."),
+    ("lectura vetada", "no lo leas; si de verdad lo necesitas, pide a la persona solo el dato."),
+    ("orden compuesta", "pártela en órdenes simples, una por llamada."),
+    ("push forzado", "no se hace nunca; si el remoto está mal, cuéntaselo a la persona."),
+    ("git -c", "no se hace nunca; usa la configuración que ya tiene el repo."),
+    ("orden ilegible", "revisa las comillas y vuelve a escribirla."),
+    ("orden no listada", "usa una orden listada en el contrato o propón una enmienda que la añada."),
+    ("efecto prohibido", "no se hace en este contrato; si es imprescindible, plantéalo a la persona como decisión aparte."),
+    ("efecto no concedido", "propón una enmienda que conceda ese efecto, explicando por qué hace falta."),
+    ("test preexistente", "si el código está mal, arregla el código; si el test está mal, propón una enmienda que lo liste en ambito.pruebas_editables."),
+    ("fuera del ámbito", "trabaja dentro del ámbito o propón una enmienda que lo amplíe."),
+    ("ruta no concedida", "trabaja en las rutas concedidas o propón una enmienda que añada esa."),
+    ("cúpula", "indica una cúpula permitida en «dome» o pide que el contrato la nombre."),
+    ("herramienta desconocida", "usa otra herramienta: esta no está clasificada en la puerta."),
+    ("presupuesto", "cierra lo que tengas, deja checkpoint y propón una enmienda con más presupuesto."),
+    ("orden de gobierno", "enseña el resumen del contrato a la persona y lanza «yema aprobar <id> <huella>»."),
+    ("huella", "vuelve a enseñar el contrato (yema resumen) y pide la aprobación con la huella nueva."),
+    ("modo", "pide a la persona que cambie a modo normal o que apruebe en su terminal."),
+    ("Yema no ejecuta", "eso es de la persona; si hace falta, díselo."),
+)
+
+
+def con_que_hacer(motivo):
+    if "Qué hacer:" in motivo:
+        return motivo
+    for clave, consejo in QUE_HACER:
+        if clave in motivo:
+            return f"{motivo}. Qué hacer: {consejo}"
+    return f"{motivo}. Qué hacer: detente y cuéntaselo a la persona."
+
+
 def decidir(ev, raiz, ahora=None):
-    """(permitido, motivo, efecto). Pura salvo lecturas de disco."""
+    """(permitido, motivo, efecto); cada rechazo dice qué hacer."""
+    ok, motivo, efecto = _decidir(ev, raiz, ahora)
+    if ok is False:
+        motivo = con_que_hacer(motivo)
+    return ok, motivo, efecto
+
+
+def _decidir(ev, raiz, ahora=None):
     ahora = ahora or datetime.now(timezone.utc)
     raiz = Path(os.path.realpath(raiz))
     pol = _politica(raiz)
@@ -293,7 +335,14 @@ def decidir(ev, raiz, ahora=None):
         rel = str(real.relative_to(base))
         if _coincide(rel, amb.get("vetadas", [])) or not _coincide(rel, amb.get("escritura", [])):
             return False, f"ruta no concedida por el contrato: {rel}", efecto
+        if real.exists() and _coincide(rel, amb.get("pruebas", [])) and not _coincide(rel, amb.get("pruebas_editables", [])):
+            return False, f"test preexistente: {rel} no se cambia para que algo pase", efecto
     return True, "", efecto
+
+
+def efectos_usados(registro):
+    return sum(1 for x in evidencia.leer(registro)
+               if x.get("permitido") is True and x.get("efecto") not in ("leer", "interno", "gobierno"))
 
 
 def evaluar_y_registrar(ev, raiz, ahora=None):
@@ -311,9 +360,9 @@ def evaluar_y_registrar(ev, raiz, ahora=None):
         tickets.mkdir(parents=True, exist_ok=True)
         (tickets / f"{args[1]}-{args[2]}.json").write_text(json.dumps({"ts": time.time()}))
     elif ok and material and c and efecto != "gobierno":
-        usados = sum(1 for x in evidencia.leer(registro) if x.get("permitido") and x.get("efecto") not in ("leer", "interno"))
+        usados = efectos_usados(registro)
         if usados >= c["recursos"].get("efectos_max", 0):
-            ok, motivo = False, f"presupuesto de efectos agotado ({usados})"
+            ok, motivo = False, con_que_hacer(f"presupuesto de efectos agotado ({usados})")
     if material or not ok:
         evidencia.anotar(registro, {"contrato": cid, "version": c["version"] if c else None,
                                     "herramienta": ev.get("tool_name"), "efecto": efecto,

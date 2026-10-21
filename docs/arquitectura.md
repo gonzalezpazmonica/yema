@@ -62,6 +62,10 @@ Lo que Savia hacía con vigilantes, marcas de fin y despertares lo sustituyen el
 - **Revisora independiente**: otra instancia con otro contexto (y, si se puede, otro modelo), con contrato de solo lectura. Sus veredictos son evidencia, no autoridad.
 - La especialización (Rust, seguridad, UX) viene del contexto que carga el contrato, no de un fichero de agente.
 
+## Influencias
+
+De ODD (Organic Driven Development, de Gentleman Programming) Yema toma la estructura y no el método: la prueba de reanudación para decidir cuánto proceso hace falta, cuatro estados visibles, un documento de reanudación con forma fija y citas literales, no tocar tests que ya existían, rechazos que dicen qué hacer y la idea de que «un control que no está cableado no es un control». En ODD esas reglas son prosa que el agente obedece; en Yema las hace cumplir la puerta, y sus pruebas pasan por el hook real.
+
 ## Arneses
 
 - **Hoy**: Claude Code con `.claude/settings.json` (hook) y `.mcp.json` (cúpulas). Es un adaptador, no el núcleo.

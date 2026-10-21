@@ -48,7 +48,7 @@ class TestCli(Entorno):
         self.assertEqual(self.cli("activar", "C-0001", "--por", "operadora").returncode, 0)
         r = self.cli("estado")
         self.assertIn("C-0001", r.stdout)
-        self.assertIn("vigente", r.stdout)
+        self.assertIn("Trabajando", r.stdout)
 
     def test_aprobar_exige_terminal_humana(self):
         self.cli("admitir", str(self.borrador()))

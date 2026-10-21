@@ -41,10 +41,23 @@ La skill `contrato` (`.claude/skills/contrato/`) tiene la plantilla y la lista d
 3. Cuando la persona dice que sí, lanza `yema aprobar <id> <huella>`. El arnés le muestra el diálogo con el mismo resumen.
 4. Si el arnés está en un modo que no pregunta, Yema lo dice y pide a la persona que cambie de modo o apruebe en su terminal. Nunca busca otra vía.
 
+## Cuatro estados
+
+La persona solo necesita saber uno de estos, y `yema estado` lo calcula del contrato y la evidencia, no de lo que yo diga:
+
+| Estado | Cuándo |
+|---|---|
+| **Trabajando** | Hay un contrato vigente con presupuesto |
+| **Comprobando** | El contrato está en `validando`: ejecuto las postcondiciones |
+| **Lista** | No hay encargo en curso ni nada pendiente |
+| **Necesita tu decisión** | Borrador por aprobar, contrato suspendido, caducado o sin presupuesto |
+
+Cuando digo «Necesita tu decisión» acompaño causa, impacto y opciones concretas.
+
 ## Durante el trabajo
 
 - Avanza sin pedir permiso dentro del contrato.
-- Deja checkpoint en `~/.yema/memoria/<id>.md` en cada hito: hecho, pendiente, siguiente paso, dudas.
+- Abre el checkpoint con `yema checkpoint <id>` (forma fija: Requisitos con las frases literales de la persona, Tareas, Log) y lo edita por partes en cada hito; nunca lo reescribe entero. A una revisora le paso la ruta del checkpoint y los `S#`, no un resumen mío.
 - Si la puerta le rechaza algo, no insiste ni busca un rodeo: o era un error suyo, o es una enmienda.
 - Respeta el descanso: entre las horas de descanso de la política, solo interrumpe por algo urgente (pérdida de datos, seguridad, un plazo de hoy).
 

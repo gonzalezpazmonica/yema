@@ -67,8 +67,19 @@ def errores(c):
     for g in amb.get("escritura", []) + amb.get("vetadas", []):
         if not _glob_seguro(g):
             e.append(f"glob inseguro {g!r}: relativo a la raíz, sin '..'")
+    for g in amb.get("pruebas", []) + amb.get("pruebas_editables", []):
+        if not _glob_seguro(g):
+            e.append(f"glob inseguro {g!r} en pruebas")
     if c["ejecutora"] == c["responsable"]:
         e.append("la ejecutora no puede ser la responsable")
+    posts = {p.get("id") for p in c.get("condiciones", {}).get("post", [])}
+    for r in c.get("requisitos", []):
+        rid = r.get("id", "?")
+        if not str(r.get("cita", "")).strip():
+            e.append(f"requisito {rid} sin cita literal de la persona")
+        for p in r.get("post", []):
+            if p not in posts:
+                e.append(f"requisito {rid} apunta a una postcondición inexistente: {p}")
     return e
 
 
@@ -135,3 +146,24 @@ def resumen(c):
     if post:
         lineas.append(f"Al cerrar demostrará: {', '.join(post)}")
     return "\n".join(lineas)
+
+
+def checkpoint(c):
+    """Documento de reanudación con forma fija: Requisitos (citas literales), Tareas, Log.
+
+    Lo estable va arriba (aprovecha la caché del prompt); se edita por partes, nunca se reescribe."""
+    a = c.get("autoridad", {})
+    lineas = [
+        f"# {c.get('id')} · {c.get('proposito')}",
+        f"Contrato v{c.get('version')} · huella {huella(c)[:8]} · caduca {a.get('caduca')}",
+        "",
+        "## Requisitos",
+    ]
+    reqs = c.get("requisitos", [])
+    lineas += [f"- {r['id']} «{r['cita']}» → {', '.join(r.get('post', [])) or 'sin postcondición'}" for r in reqs] or [
+        "- (sin requisitos citados: pide a la persona sus palabras exactas)"]
+    lineas += ["", "## Tareas", "- [ ] T1 (por definir; cada tarea enlaza un requisito y deja su evidencia)", "", "## Log"]
+    if c.get("peticion"):
+        lineas.append(f"- Petición original: «{c['peticion']}»")
+    lineas.append(f"- Contrato {c.get('id')} v{c.get('version')} en estado {c.get('estado')}")
+    return "\n".join(lineas) + "\n"

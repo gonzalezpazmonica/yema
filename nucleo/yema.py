@@ -59,6 +59,7 @@ def main(argv=None, raiz=None, tty=None):
     s.add_parser("evidencia").add_argument("id")
     s.add_parser("resumen").add_argument("id")
     s.add_parser("cuidado")
+    s.add_parser("checkpoint").add_argument("id")
     s.add_parser("copia")
     ap = s.add_parser("aprobar")
     ap.add_argument("id"), ap.add_argument("huella")
@@ -105,13 +106,19 @@ def main(argv=None, raiz=None, tty=None):
     if a.orden == "aprobar":
         return _aprobar(a, raiz, codigo, pol, tty)
     if a.orden == "estado":
-        punt = raiz / "contratos/ACTIVO"
-        if not punt.exists():
-            print("sin contrato activo (E0: solo lectura)")
-            return 0
-        c, motivo = puerta.activo(codigo, pol, None)
-        cid = punt.read_text().strip()
-        print(f"{cid}: {'vigente' if c else motivo}")
+        visible, detalle = situacion(codigo)
+        print(f"{visible}: {detalle}")
+        return 0
+    if a.orden == "checkpoint":
+        c = puerta._contrato_de_gobierno(raiz, a.id)
+        if c is None:
+            print(f"no encuentro {a.id}", file=sys.stderr)
+            return 1
+        f = raiz / "memoria" / f"{a.id}.md"
+        if not f.exists():
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(contrato.checkpoint(c), encoding="utf-8")
+        print(f)
         return 0
     if a.orden == "evidencia":
         ok, n = evidencia.verificar(raiz / "evidencia" / f"{a.id}.jsonl")
@@ -137,6 +144,33 @@ def main(argv=None, raiz=None, tty=None):
                      {"contrato": a.id, "transicion": nuevo, "por": a.por, "motivo": a.motivo})
     print(f"{a.id}: {nuevo}")
     return 0
+
+
+def situacion(codigo, ahora=None):
+    """Estado visible para la persona: Trabajando, Comprobando, Lista o Necesita tu decisión."""
+    codigo = Path(codigo)
+    pol = json.loads((codigo / "gobierno/politica.json").read_text(encoding="utf-8"))
+    raiz = puerta.estado_de(codigo, pol)
+    punt = raiz / "contratos/ACTIVO"
+    if punt.exists():
+        cid = punt.read_text().strip()
+        ruta = raiz / "contratos" / f"{cid}.json"
+        if not ruta.exists():
+            return "Necesita tu decisión", f"ACTIVO apunta a {cid}, que no existe"
+        c = contrato.cargar(ruta)
+        if c["estado"] == "validando":
+            return "Comprobando", f"{cid}: ejecutando las postcondiciones"
+        vale, motivo = contrato.vigente(c, pol, ahora)
+        if not vale:
+            return "Necesita tu decisión", f"{cid}: {motivo}"
+        usados = puerta.efectos_usados(raiz / "evidencia" / f"{cid}.jsonl")
+        if usados >= c["recursos"].get("efectos_max", 0):
+            return "Necesita tu decisión", f"{cid}: presupuesto agotado ({usados} efectos); hace falta una enmienda"
+        return "Trabajando", f"{cid}: {c['proposito']} ({usados}/{c['recursos'].get('efectos_max', 0)} efectos)"
+    borradores = sorted(p.stem for p in (raiz / "contratos/borradores").glob("*.json"))
+    if borradores:
+        return "Necesita tu decisión", f"borradores pendientes de aprobar: {', '.join(borradores)}"
+    return "Lista", "sin encargo en curso"
 
 
 def _persona_presente(raiz, cid, h8, tty):

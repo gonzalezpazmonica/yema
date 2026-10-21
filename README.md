@@ -119,7 +119,8 @@ Pensada para la persona; Yema la usa en la conversación y la puerta decide qué
 
 | Orden | Qué hace | ¿Yema sola? |
 |---|---|---|
-| `yema estado` | Contrato activo y si está vigente | Sí |
+| `yema estado` | Trabajando, Comprobando, Lista o Necesita tu decisión | Sí |
+| `yema checkpoint <id>` | Abre el documento de reanudación (requisitos, tareas, log) | Sí |
 | `yema resumen <id>` | El contrato en lenguaje llano | Sí |
 | `yema validar <ruta>` | Comprueba el esquema | Sí |
 | `yema admitir <borrador>` | Pasa un borrador a candidato | Sí |
@@ -141,7 +142,10 @@ Pensada para la persona; Yema la usa en la conversación y la puerta decide qué
 - Yema no aprueba, no activa ni amplía sus contratos; no toca su núcleo, su gobierno, su identidad ni su evidencia.
 - Lecturas vetadas por la política; cúpulas solo por nombre permitido.
 - Evidencia encadenada por hash: cualquier manipulación se detecta.
+- Los tests que ya existían no se cambian para que algo pase, salvo enmienda.
+- Cada rechazo dice qué hacer.
 - Ante cualquier error, la puerta bloquea.
+- Las garantías se prueban a través del hook real, tal como está registrado.
 
 **No garantiza** (y lo dice): una orden permitida puede hacer más de lo que su nombre sugiere (por eso la frontera fuerte es el sandbox del sistema operativo en Savia Space); la puerta solo ve lo que el arnés le enseña; el presupuesto cuenta efectos, no tokens. Detalle en [`docs/seguridad.md`](docs/seguridad.md).
 

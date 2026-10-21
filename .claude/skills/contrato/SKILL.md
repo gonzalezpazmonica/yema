@@ -25,14 +25,17 @@ description: Redactar, enseñar, enmendar y pedir la aprobación de un contrato 
    - `autoridad.caduca`: lo que dure el encargo más un margen, con zona horaria.
    - `recursos.efectos_max`: estimación honesta (unos 3 efectos por fichero tocado, más las órdenes).
    - `condiciones.post`: órdenes con lo que deben devolver, más un informe en `~/.yema/memoria/<id>.md`.
+   - `peticion`: las palabras exactas de la persona. `requisitos`: lo que pidió, en sus frases literales (`S1`, `S2`…), cada uno enlazado a la postcondición que lo demuestra.
+   - `ambito.pruebas`: globs de los tests del repo, para que los que ya existen no se toquen.
 4. **Valida**: `yema validar ~/.yema/contratos/borradores/<id>.json`. Si falla, corrige y repite.
 5. **Enseña**: `yema resumen <id>`, y pega la salida en la conversación. Añade una línea sobre por qué ese alcance y no otro.
 6. **Si la persona dice que sí**: `yema aprobar <id> <huella8>`. El arnés le mostrará el diálogo. Si el modo no pregunta, díselo y no busques otra vía.
-7. **Si pide cambios**: edita el borrador; la huella cambia; vuelve al paso 5.
+7. **Tras aprobar**: `yema checkpoint <id>`.
+8. **Si pide cambios**: edita el borrador; la huella cambia; vuelve al paso 5.
 
 ## Enmiendas
 
-Si a mitad del trabajo necesitas algo que el contrato no concede: no lo intentes. Copia el contrato vigente a un borrador con `version` +1 e id nuevo (`C-0002` → `C-0003`), cambia solo lo necesario, explica la diferencia en una línea, y sigue los pasos 4-6. Al aprobar el nuevo, revoca el viejo (`yema revocar <id viejo> --por yema --motivo "sustituido por …"`).
+Si a mitad del trabajo necesitas algo que el contrato no concede: no lo intentes. Copia el contrato vigente a un borrador con `version` +1 e id nuevo (`C-0002` → `C-0003`), cambia solo lo necesario, explica la diferencia en una línea, y sigue los pasos 4-7. Al aprobar el nuevo, revoca el viejo (`yema revocar <id viejo> --por yema --motivo "sustituido por …"`).
 
 ## Lista de comprobación antes de enseñar
 
