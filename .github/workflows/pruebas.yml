@@ -10,5 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: Núcleo, garantías negativas y presupuesto de arranque
-        run: python3 -m unittest discover -s pruebas -v
+      - name: bwrap del sistema, para probar el aislamiento de verdad
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq bubblewrap
+          # Ubuntu 24.04 restringe los espacios de nombres sin privilegios; bwrap los necesita.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          bwrap --ro-bind /usr /usr --symlink usr/bin /bin --symlink usr/lib /lib --symlink usr/lib64 /lib64 --proc /proc --dev /dev --unshare-all true && echo "bwrap operativo"
+      - name: Núcleo, garantías negativas, aislamiento y presupuesto de arranque
+        run: |
+          python3 -m unittest discover -s pruebas -v 2>&1 | tee salida.txt
+          grep -q "^OK" salida.txt
+          if grep -q "skipped 'sin bwrap" salida.txt; then echo "las pruebas del aislamiento se saltaron"; exit 1; fi
