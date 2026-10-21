@@ -73,6 +73,10 @@ def errores(c):
     if c["ejecutora"] == c["responsable"]:
         e.append("la ejecutora no puede ser la responsable")
     posts = {p.get("id") for p in c.get("condiciones", {}).get("post", [])}
+    for p in c.get("condiciones", {}).get("post", []):
+        if not str(p.get("orden", "")).strip() and not str(p.get("comprobar", "")).strip():
+            e.append(f"postcondición {p.get('id', '?')} sin comprobación: una orden, o en «comprobar» "
+                     "cómo se reabre y verifica el entregable (escribirlo no prueba que sirva)")
     for r in c.get("requisitos", []):
         rid = r.get("id", "?")
         if not str(r.get("cita", "")).strip():

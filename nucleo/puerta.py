@@ -35,7 +35,7 @@ CUPULA_ESCRITURA = {"vault_write", "vault_rag_sync", "vault_index"}
 METACARACTERES = set(";|&`$<>()\n\\")
 PROTEGIDAS = ("nucleo", "gobierno", "contratos", "evidencia", ".claude")
 IDENTIDAD = ("AGENTS.md", "CLAUDE.md", "ALMA.md")
-GOBIERNO_LIBRE = {"estado", "validar", "resumen", "evidencia", "admitir", "suspender", "revocar", "cuidado", "copia",
+GOBIERNO_LIBRE = {"aprende", "estado", "validar", "resumen", "evidencia", "admitir", "suspender", "revocar", "cuidado", "copia",
                   "checkpoint", "prueba", "savia"}
 TRANSICIONES_LIBRES = {"borrador", "cuestionado", "candidato", "en_revision", "rechazado", "validando"}
 MODOS_SIN_PREGUNTA = {"bypassPermissions", "dontAsk"}

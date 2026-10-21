@@ -5,6 +5,10 @@
 Yema nace: una compañera de trabajo con IA que hace trabajo largo dentro de contratos que aprueba una persona, con una puerta fuera del modelo que hace cumplir sus límites.
 
 ### Núcleo
+- **Aprobar desde el harness también en modo auto**: los diálogos que fuerza la puerta aparecen en el modo de serie de Claude Code; solo `bypassPermissions` y `dontAsk` deniegan.
+- **Entregable comprobado**: cada postcondición lleva una orden o un `comprobar`.
+- **Lecciones con evidencia**: `yema aprende` y el validador del buzón rechazan un aprendizaje sin cuándo, lección, evidencia y confianza.
+- **Juicio ciego reutilizable**: `evals/ciego.py`.
 - **Contratos**: esquema, huella sellada al aprobar, ciclo de vida (borrador → … → cerrado; suspendido, revocado, caducado), vigencia, requisitos con citas literales y petición original.
 - **Puerta** (hook `PreToolUse`): sin contrato, solo lectura y zonas libres; con contrato, ámbito, efectos, órdenes exactas, presupuesto y caducidad. Falla cerrado. Cada rechazo dice qué hacer.
 - **Evidencia** encadenada por hash.

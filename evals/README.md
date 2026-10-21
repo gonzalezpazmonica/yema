@@ -20,3 +20,8 @@ Las tareas con datos privados se guardan en `~/.yema/evals/`, no aquí.
 ## Regla
 
 Un resultado adverso se registra igual que uno favorable. Si Yema gasta más para la misma calidad, se dice.
+
+## Juicio ciego
+
+`python3 -m evals.ciego <runs> <ciego> <mapa.json> --tarea D` copia `<runs>/<sistema>/<n>.md` a `<ciego>/D-<letra>-<n>.md`, con letras al azar y los nombres de los sistemas borrados del texto. El mapa queda aparte. La jueza solo ve `<ciego>` y los criterios, fijados antes de ejecutar. El mapa se abre después del veredicto.
+

@@ -105,7 +105,8 @@
       },
       {
         "id": "informe",
-        "descripcion": "memoria/C-EJEMPLO.md con lo hecho, lo pendiente y lo que necesita decisión"
+        "descripcion": "memoria/C-EJEMPLO.md con lo hecho, lo pendiente y lo que necesita decisión",
+        "comprobar": "reabrir el informe y comprobar que tiene las tres secciones: hecho, pendiente y decisiones"
       }
     ]
   },

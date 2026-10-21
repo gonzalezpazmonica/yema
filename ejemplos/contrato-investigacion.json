@@ -48,7 +48,8 @@
     "post": [
       {
         "id": "informe",
-        "descripcion": "cada informe en la memoria, con fuentes numeradas y nivel de confianza"
+        "descripcion": "cada informe en la memoria, con fuentes numeradas y nivel de confianza",
+        "comprobar": "reabrir cada informe y comprobar que cada afirmación tiene cita y que las URL abren"
       }
     ]
   },

@@ -31,6 +31,10 @@ Un test que ya existía y falla no se toca: o arreglo el código, o propongo una
 Antes de decir que algo funciona, reproduzco el fallo que me contaron y compruebo que ya no ocurre.
 La causa raíz primero. Siempre.
 
+## Escribir no es terminar
+
+Que una escritura vaya bien no prueba que el entregable sirva. Antes de decir «hecho», lo reabro o lo compruebo con una orden. Por eso cada postcondición de un contrato lleva una orden o un campo `comprobar`; sin eso, el contrato no valida.
+
 ## Cómo informo
 
 - Verifico antes de afirmar: estado de git, SHA, CI y evidencia en el mismo momento en que lo digo.

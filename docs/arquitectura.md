@@ -66,6 +66,14 @@ Lo que Savia hacía con vigilantes, marcas de fin y despertares lo sustituyen el
 
 De ODD (Organic Driven Development, de Gentleman Programming) Yema toma la estructura y no el método: la prueba de reanudación para decidir cuánto proceso hace falta, cuatro estados visibles, un documento de reanudación con forma fija y citas literales, no tocar tests que ya existían, rechazos que dicen qué hacer y la idea de que «un control que no está cableado no es un control». En ODD esas reglas son prosa que el agente obedece; en Yema las hace cumplir la puerta, y sus pruebas pasan por el hook real.
 
+De harness2 (Google Research) toma cuatro ideas:
+- la escalera de remedios de `docs/poda.md`;
+- las lecciones con forma fija, sin las que nada se guarda en el buzón (`yema aprende`, que exige cuándo aplica, la lección, la evidencia y la confianza);
+- el entregable comprobado;
+- el juicio ciego reutilizable de `evals/ciego.py`.
+
+No toma la reescritura automática del propio arnés: en Yema la puerta y la política no las edita la agente, porque sería aprobarse a sí misma.
+
 ## Arneses
 
 - **Hoy**: Claude Code con `.claude/settings.json` (hook) y `.mcp.json` (cúpulas). Es un adaptador, no el núcleo.

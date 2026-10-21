@@ -27,7 +27,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from nucleo import aislado, contrato, cuidado, evidencia, puerta  # noqa: E402
+from nucleo import aislado, buzon, contrato, cuidado, evidencia, puerta  # noqa: E402
 
 HUMANAS = {"aprobado", "activo"}
 VENTANA_TICKET_S = 300
@@ -74,6 +74,10 @@ def main(argv=None, raiz=None, tty=None):
     ins = s.add_parser("instalar")
     ins.add_argument("--bin", default=os.path.expanduser("~/.local/bin"))
     s.add_parser("copia")
+    apr = s.add_parser("aprende")
+    for k in ("--cuando", "--leccion", "--evidencia", "--confianza"):
+        apr.add_argument(k, required=True)
+    apr.add_argument("--para", default="savia")
     ap = s.add_parser("aprobar")
     ap.add_argument("id"), ap.add_argument("huella")
     ap.add_argument("--por", default=None)
@@ -115,6 +119,14 @@ def main(argv=None, raiz=None, tty=None):
         return 0
     if a.orden == "prueba":
         return _prueba(a, raiz, codigo, pol)
+    if a.orden == "aprende":
+        m = buzon.leccion("yema", a.para, a.cuando, a.leccion, a.evidencia, a.confianza)
+        ruta, e = buzon.dejar(m, raiz / "buzon/salida")
+        if e:
+            print("\n".join(e), file=sys.stderr)
+            return 1
+        print(f"aprendizaje en {ruta}")
+        return 0
     if a.orden == "instalar":
         return _instalar(codigo, raiz, Path(a.bin))
     if a.orden == "savia":

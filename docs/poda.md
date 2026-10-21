@@ -33,3 +33,16 @@ Lo de clase B se porta a la puerta o al contrato; lo de clase C se enlaza en las
 2. Medir con la línea base (`evals/`) con y sin X.
 3. Si no empeora, X no entra (o sale). Si empeora, entra lo mínimo que lo recupera.
 4. Registrar el resultado: los adversos también.
+
+## Escalera de remedios
+
+Cuando algo falla, el arreglo es el escalón más barato que lo resuelve. Una regla nueva tiene que explicar por qué no basta el escalón anterior.
+
+1. **Nada**: si fue una vez, no se añade nada.
+2. **Una línea** en la guía o en la skill que aplica, para errores de secuencia corrientes.
+3. **Un script determinista**, cuando el modelo repite a mano una extracción, conversión o comprobación.
+4. **Una skill a demanda**, para un procedimiento de varios pasos con disparador claro. El disparador se nombra en una línea siempre visible.
+5. **La puerta o un hook**, solo cuando hay evidencia repetida de que la prosa se ignora o cuando el coste de saltársela es alto (gobierno, privacidad). No debe impedir terminar un trabajo válido.
+
+Ante un error de herramienta: distinguir entrada mala, tiempo agotado, capacidad que falta, permiso o salida sin leer. Un plan alternativo acotado y una condición de parada; nunca repetir a ciegas.
+
