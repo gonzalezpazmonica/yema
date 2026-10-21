@@ -20,8 +20,14 @@ def main():
         if not estado.is_dir():
             return 0
         visible, detalle = yema.situacion(codigo)
+        import shutil
+        import subprocess
+        hay = [h for h in ("python3", "cargo", "node", "npm", "go") if shutil.which(h)]
+        if "python3" in hay:
+            pt = subprocess.run(["python3", "-c", "import pytest"], capture_output=True).returncode == 0
+            hay.append("pytest" if pt else "sin pytest (usa python3 -m unittest)")
         ctx = (f"Yema · {visible}: {detalle}. Estado privado: {estado} (borradores en {estado}/contratos/borradores, "
-               f"memoria en {estado}/memoria). CLI: yema.")
+               f"memoria en {estado}/memoria). CLI: yema. Herramientas: {', '.join(hay) or 'ninguna'}.")
         print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": ctx}},
                          ensure_ascii=False))
     except Exception:

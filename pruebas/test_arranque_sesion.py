@@ -27,6 +27,7 @@ class TestArranqueSesion(unittest.TestCase):
             ctx = json.loads(r.stdout)["hookSpecificOutput"]["additionalContext"]
             self.assertIn("Lista", ctx)
             self.assertIn(str(estado), ctx)
+            self.assertIn("python3", ctx)  # herramientas disponibles: no gasta turnos en tantear
             self.assertLess(len(ctx.split()), 80)  # barato: no es un segundo AGENTS.md
 
     def test_falla_en_silencio_sin_romper_la_sesion(self):

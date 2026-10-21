@@ -162,6 +162,24 @@ class TestPuerta(Entorno):
                     "ls 2>&1 > x"):
             self.assertFalse(self.decide("Bash", {"command": cmd})[0], cmd)
 
+    def test_cadenas_con_gobierno_libre(self):
+        (self.yema / "nucleo/yema.py").write_text("")
+        cli = f"python3 {self.yema}/nucleo/yema.py"
+        for cmd in (f"cd src && ls -R | head -50 && {cli} cuidado 2>&1 | head -5",
+                    f"ls src && {cli} estado", f"find src -type f | head && {cli} prueba src -- python3 -m unittest"):
+            ok, motivo, _ = self.decide("Bash", {"command": cmd})
+            self.assertTrue(ok, f"{cmd}: {motivo}")
+        for cmd in (f"ls && {cli} aprobar C-1 abcd1234", f"ls && {cli} transicion C-1 aprobado --por x",
+                    f"ls && {cli} instalar", f"{cli} estado && touch x"):
+            self.assertFalse(self.decide("Bash", {"command": cmd})[0], cmd)
+
+    def test_mkdir_en_zona_libre(self):
+        self.assertTrue(self.decide("Bash", {"command": f"mkdir -p {self.yema}/memoria/notas/x"})[0])
+        self.assertTrue(self.decide("Bash", {"command": f"mkdir -p {self.yema}/contratos/borradores/b"})[0])
+        for cmd in (f"mkdir -p {self.yema}/contratos/x", "mkdir -p /tmp/fuera", f"mkdir -p {self.yema}/nucleo/x",
+                    f"mkdir -p {self.yema}/memoria/x /tmp/y"):
+            self.assertFalse(self.decide("Bash", {"command": cmd})[0], cmd)
+
     def test_diff_es_lectura(self):
         ok, motivo, efecto = self.decide("Bash", {"command": "diff -u src/a.py src/b.py"})
         self.assertTrue(ok, motivo)

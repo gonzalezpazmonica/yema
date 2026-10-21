@@ -209,7 +209,24 @@ def sin_redireccion_inocua(cmd):
     return REDIRECCION_INOCUA.sub("", cmd)
 
 
-def lectura_encadenada(cmd, cwd, pol):
+def mkdir_en_zona_libre(cmd, cwd, estado, pol):
+    if any(ch in METACARACTERES for ch in cmd):
+        return False
+    try:
+        toks = shlex.split(cmd)
+    except ValueError:
+        return False
+    rutas = [t for t in toks[1:] if not t.startswith("-")]
+    if not toks or toks[0] != "mkdir" or not rutas or any(t not in ("-p", "--parents") for t in toks[1:] if t.startswith("-")):
+        return False
+    for r in rutas:
+        real = _real(r, cwd)
+        if not _dentro(real, estado) or not _coincide(str(real.relative_to(estado)), pol.get("zonas_libres", [])):
+            return False
+    return True
+
+
+def lectura_encadenada(cmd, cwd, pol, raiz=None):
     """True si `cmd` es una cadena de lectores inertes unidos por && o |, con cd entre medias.
 
     Cada cd cambia el directorio con el que se resuelven (y se vetan) las rutas siguientes."""
@@ -233,8 +250,12 @@ def lectura_encadenada(cmd, cwd, pol):
                     return False
                 actual = str(_real(toks[1], actual))
                 continue
-            if not lector_inerte(tramo, actual, pol):
-                return False
+            if lector_inerte(tramo, actual, pol):
+                continue
+            args = orden_de_gobierno(tramo, raiz, actual) if raiz is not None else None
+            if args and args[0] in GOBIERNO_LIBRE:
+                continue
+            return False
     return True
 
 
@@ -347,8 +368,10 @@ def _decidir(ev, raiz, ahora=None):
         if args is not None:
             return decidir_gobierno(args, ev, estado)
         lectura = sin_redireccion_inocua(entrada.get("command", ""))
-        if lector_inerte(lectura, cwd, pol) or lectura_encadenada(lectura, cwd, pol):
+        if lector_inerte(lectura, cwd, pol) or lectura_encadenada(lectura, cwd, pol, raiz):
             return True, "", "leer"
+        if mkdir_en_zona_libre(entrada.get("command", ""), cwd, estado, pol):
+            return True, "", "escribir"
         if any(ch in METACARACTERES for ch in entrada.get("command", "")):
             return False, "orden compuesta, con redirección o sustitución: pártela en órdenes simples", "bash"
     c, motivo_c = activo(raiz, pol, ahora)

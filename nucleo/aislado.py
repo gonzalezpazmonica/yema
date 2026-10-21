@@ -105,7 +105,12 @@ def ejecutar(origen, orden, base, parche=None, timeout=120, max_mb=200, vetado=N
                         "segundos": round(time.time() - t0, 1)}
         try:
             r = subprocess.run(_caja(bw, copia) + list(orden), capture_output=True, text=True, timeout=timeout)
-            res = {"rc": r.returncode, "salida": (r.stdout + r.stderr)[-MAX_SALIDA:], "agotado": False}
+            salida = (r.stdout + r.stderr)[-MAX_SALIDA:]
+            if "No module named pytest" in salida:
+                salida += "\npytest no está instalado aquí: usa «python3 -m unittest»."
+            if "execvp python:" in salida:
+                salida += "\nAquí no hay «python»: usa «python3»."
+            res = {"rc": r.returncode, "salida": salida, "agotado": False}
         except subprocess.TimeoutExpired as e:
             out = (e.stdout or b"") + (e.stderr or b"")
             out = out.decode(errors="replace") if isinstance(out, bytes) else out

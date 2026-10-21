@@ -83,6 +83,14 @@ class TestAislado(unittest.TestCase):
         self.assertNotEqual(r["rc"], 0)
         self.assertNotIn("no-deberias-verme", r["salida"])
 
+    def test_aviso_si_falta_el_ejecutor(self):
+        r = self.corre(["python", "-V"])
+        if r["rc"] != 0:
+            self.assertIn("python3", r["salida"])
+        r = self.corre(["python3", "-m", "pytest", "-q"])
+        if "No module named pytest" in r["salida"]:
+            self.assertIn("unittest", r["salida"])
+
     def test_limite_de_tiempo(self):
         r = self.corre(["sleep", "5"], timeout=1)
         self.assertTrue(r["agotado"])
