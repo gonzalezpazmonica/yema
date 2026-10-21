@@ -196,6 +196,38 @@ def lector_inerte(cmd, cwd, pol):
     return not any(_vetada(_real(a, cwd), pol) for a in args if not a.startswith("-"))
 
 
+SEPARADORES_LECTURA = set(";`$<>()\n\\")
+
+
+def lectura_encadenada(cmd, cwd, pol):
+    """True si `cmd` es una cadena de lectores inertes unidos por && o |, con cd entre medias.
+
+    Cada cd cambia el directorio con el que se resuelven (y se vetan) las rutas siguientes."""
+    if any(ch in SEPARADORES_LECTURA for ch in cmd) or "||" in cmd:
+        return False
+    if "&" in cmd.replace("&&", ""):
+        return False
+    actual = cwd
+    for parte in cmd.split("&&"):
+        tramos = parte.split("|")
+        for i, tramo in enumerate(tramos):
+            tramo = tramo.strip()
+            try:
+                toks = shlex.split(tramo)
+            except ValueError:
+                return False
+            if not toks:
+                return False
+            if toks[0] == "cd":
+                if len(toks) != 2 or len(tramos) > 1:
+                    return False
+                actual = str(_real(toks[1], actual))
+                continue
+            if not lector_inerte(tramo, actual, pol):
+                return False
+    return True
+
+
 def _contrato_de_gobierno(estado, cid):
     if not cid or "/" in cid:
         return None
@@ -304,7 +336,7 @@ def _decidir(ev, raiz, ahora=None):
         args = orden_de_gobierno(entrada.get("command", ""), raiz, cwd)
         if args is not None:
             return decidir_gobierno(args, ev, estado)
-        if lector_inerte(entrada.get("command", ""), cwd, pol):
+        if lector_inerte(entrada.get("command", ""), cwd, pol) or lectura_encadenada(entrada.get("command", ""), cwd, pol):
             return True, "", "leer"
         if any(ch in METACARACTERES for ch in entrada.get("command", "")):
             return False, "orden compuesta, con redirección o sustitución: pártela en órdenes simples", "bash"

@@ -139,12 +139,27 @@ class TestPuerta(Entorno):
         self.assertTrue(self.decide("Bash", {"command": "python3 src/a.py"})[0])
 
     def test_compuesta_sin_contrato_dice_partir(self):
-        ok, motivo, _ = self.decide("Bash", {"command": "cd src && ls"})
+        ok, motivo, _ = self.decide("Bash", {"command": "cd src && touch x"})
         self.assertFalse(ok)
         self.assertIn("pártela", motivo)
 
     def test_skill_es_interna(self):
         self.assertTrue(self.decide("Skill", {"skill": "contrato"})[0])
+
+    def test_cadenas_que_solo_leen(self):
+        for cmd in ("cd src && ls -la", "cd src && find . -type f | head -20", "ls -la && pwd",
+                    "find src -name '*.py' | wc -l", "cat src/a.py | grep -n foo"):
+            ok, motivo, efecto = self.decide("Bash", {"command": cmd})
+            self.assertTrue(ok, f"{cmd}: {motivo}")
+            self.assertEqual(efecto, "leer")
+
+    def test_cadenas_que_no_solo_leen(self):
+        import os
+        ssh = os.path.expanduser("~/.ssh")
+        for cmd in (f"cd {ssh} && cat id_ed25519", f"cd {ssh} && grep -n x id_ed25519", "cd src && touch x",
+                    "ls || touch x", "ls & touch x", "ls | sh", "ls && ls; touch x", "cd src && cd .. && sed -i x a",
+                    "find . | xargs cat", "cat src/a.py 2>&1 | head", "cd", "cd src extra && ls"):
+            self.assertFalse(self.decide("Bash", {"command": cmd})[0], cmd)
 
     def test_lectores_inertes_sin_contrato(self):
         for cmd in ("ls -la src", "find src -name '*.py'", "cat src/a.py", "head -5 src/a.py", "wc -l src/a.py",
