@@ -162,6 +162,13 @@ class TestPuerta(Entorno):
                     "ls 2>&1 > x"):
             self.assertFalse(self.decide("Bash", {"command": cmd})[0], cmd)
 
+    def test_diff_es_lectura(self):
+        ok, motivo, efecto = self.decide("Bash", {"command": "diff -u src/a.py src/b.py"})
+        self.assertTrue(ok, motivo)
+        self.assertEqual(efecto, "leer")
+        self.assertFalse(self.decide("Bash", {"command": "diff -u src/a.py ~/.ssh/id_ed25519"})[0])
+        self.assertFalse(self.decide("Bash", {"command": "diff -u a b > p.diff"})[0])
+
     def test_cadenas_que_no_solo_leen(self):
         import os
         ssh = os.path.expanduser("~/.ssh")

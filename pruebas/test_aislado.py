@@ -59,6 +59,7 @@ class TestAislado(unittest.TestCase):
         r = self.corre(["python3", "-m", "unittest", "-q"], parche=parche)
         self.assertNotEqual(r["rc"], 0)
         self.assertIn("parche", r["salida"])
+        self.assertIn("diff -u", r["salida"])  # dice cómo generar uno bueno
 
     def test_escribir_no_toca_el_original(self):
         r = self.corre(["touch", "nuevo.txt"])

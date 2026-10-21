@@ -32,7 +32,7 @@ GOBIERNO_LIBRE = {"estado", "validar", "resumen", "evidencia", "admitir", "suspe
 TRANSICIONES_LIBRES = {"borrador", "cuestionado", "candidato", "en_revision", "rechazado", "validando"}
 MODOS_SIN_PREGUNTA = {"bypassPermissions", "dontAsk", "auto"}
 # Lectores inertes: leen o listan, no escriben ni ejecutan otros programas. Sin ellos no hay E0 útil.
-LECTORES = {"ls", "find", "cat", "head", "tail", "wc", "grep", "tree", "pwd", "stat", "file", "du", "realpath"}
+LECTORES = {"ls", "find", "cat", "head", "tail", "wc", "grep", "tree", "pwd", "stat", "file", "du", "realpath", "diff"}
 FIND_PELIGROSO = {"-exec", "-execdir", "-ok", "-okdir", "-delete", "-fprint", "-fprint0", "-fprintf", "-fls"}
 GREP_RECURSIVO = ("-r", "-R", "--recursive", "--dereference-recursive", "-d", "--directories")
 

@@ -99,7 +99,9 @@ def ejecutar(origen, orden, base, parche=None, timeout=120, max_mb=200, vetado=N
                 if r.returncode == 0:
                     break
             else:
-                return {"rc": 1, "salida": "el parche no aplica:\n" + salida[-MAX_SALIDA:], "agotado": False,
+                consejo = ("\nNo escribas los hunks a mano: guarda el fichero corregido en tu memoria y genera el parche "
+                           "con «diff -u <original> <corregido>», que siempre sale bien formado.")
+                return {"rc": 1, "salida": "el parche no aplica:\n" + salida[-MAX_SALIDA:] + consejo, "agotado": False,
                         "segundos": round(time.time() - t0, 1)}
         try:
             r = subprocess.run(_caja(bw, copia) + list(orden), capture_output=True, text=True, timeout=timeout)
