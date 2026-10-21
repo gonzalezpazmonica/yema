@@ -9,6 +9,8 @@
     yema evidencia <id>                   verifica la cadena de evidencia
     yema resumen <id>                     el contrato en lenguaje llano
     yema aprobar <id> <huella8>           aprueba y activa (solo una persona)
+    yema prueba <carpeta> [--parche f.diff] -- <orden>
+                                          ejecuta en una copia aislada (sin red, sin hogar)
     yema cuidado                          salud: permisos, copias, disco, descanso
     yema copia                            copia del estado privado (rota las viejas)
 
@@ -24,7 +26,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from nucleo import contrato, cuidado, evidencia, puerta  # noqa: E402
+from nucleo import aislado, contrato, cuidado, evidencia, puerta  # noqa: E402
 
 HUMANAS = {"aprobado", "activo"}
 VENTANA_TICKET_S = 300
@@ -60,6 +62,11 @@ def main(argv=None, raiz=None, tty=None):
     s.add_parser("resumen").add_argument("id")
     s.add_parser("cuidado")
     s.add_parser("checkpoint").add_argument("id")
+    pr = s.add_parser("prueba")
+    pr.add_argument("carpeta")
+    pr.add_argument("--parche")
+    pr.add_argument("--tiempo", type=int, default=120)
+    pr.add_argument("orden_prueba", nargs=argparse.REMAINDER)
     ins = s.add_parser("instalar")
     ins.add_argument("--bin", default=os.path.expanduser("~/.local/bin"))
     s.add_parser("copia")
@@ -95,6 +102,8 @@ def main(argv=None, raiz=None, tty=None):
             return 1
         print(contrato.resumen(c))
         return 0
+    if a.orden == "prueba":
+        return _prueba(a, raiz, codigo, pol)
     if a.orden == "instalar":
         return _instalar(codigo, raiz, Path(a.bin))
     if a.orden == "cuidado":
@@ -149,6 +158,22 @@ def main(argv=None, raiz=None, tty=None):
                      {"contrato": a.id, "transicion": nuevo, "por": a.por, "motivo": a.motivo})
     print(f"{a.id}: {nuevo}")
     return 0
+
+
+def _prueba(a, raiz, codigo, pol):
+    orden = list(a.orden_prueba)
+    if orden[:1] == ["--"]:
+        orden = orden[1:]
+    vetado = lambda p: puerta._vetada(Path(os.path.realpath(p)), pol)  # noqa: E731
+    try:
+        r = aislado.ejecutar(a.carpeta, orden, base=raiz / "aislado", parche=a.parche, timeout=a.tiempo,
+                             vetado=vetado)
+    except aislado.Rechazo as e:
+        print(f"no ejecuto: {e}", file=sys.stderr)
+        return 3
+    print(r["salida"])
+    print(f"rc={r['rc']} en {r['segundos']} s · copia aislada sin red ni hogar; el original no ha cambiado")
+    return r["rc"]
 
 
 def _instalar(codigo, estado, bindir):

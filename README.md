@@ -127,6 +127,7 @@ Pensada para la persona; Yema la usa en la conversación y la puerta decide qué
 | `yema aprobar <id> <huella>` | Aprueba y activa | **No: diálogo de permisos o tu terminal** |
 | `yema suspender / revocar <id>` | Para el trabajo | Sí (parar siempre se permite) |
 | `yema evidencia <id>` | Verifica la cadena de recibos | Sí |
+| `yema prueba <carpeta> [--parche f.diff] -- <orden>` | Ejecuta en una copia aislada (bwrap de root, sin red, sin hogar, con límites); el original no cambia | Sí |
 | `yema cuidado` | Permisos, copias, disco, descanso | Sí |
 | `yema copia` | Copia del estado privado (rota las viejas) | Sí |
 

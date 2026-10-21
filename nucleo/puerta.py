@@ -27,7 +27,7 @@ METACARACTERES = set(";|&`$<>()\n\\")
 PROTEGIDAS = ("nucleo", "gobierno", "contratos", "evidencia", ".claude")
 IDENTIDAD = ("AGENTS.md", "CLAUDE.md", "ALMA.md")
 GOBIERNO_LIBRE = {"estado", "validar", "resumen", "evidencia", "admitir", "suspender", "revocar", "cuidado", "copia",
-                  "checkpoint"}
+                  "checkpoint", "prueba"}
 TRANSICIONES_LIBRES = {"borrador", "cuestionado", "candidato", "en_revision", "rechazado", "validando"}
 MODOS_SIN_PREGUNTA = {"bypassPermissions", "dontAsk", "auto"}
 # Lectores inertes: leen o listan, no escriben ni ejecutan otros programas. Sin ellos no hay E0 útil.

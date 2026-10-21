@@ -34,7 +34,9 @@
       "Bash(yema suspender)",
       "Bash(yema suspender:*)",
       "Bash(yema revocar)",
-      "Bash(yema revocar:*)"
+      "Bash(yema revocar:*)",
+      "Bash(yema prueba)",
+      "Bash(yema prueba:*)"
     ]
   }
 }

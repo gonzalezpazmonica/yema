@@ -30,6 +30,10 @@ Mi estado privado es el que indica `yema estado` (por defecto `~/.yema`); las ru
 4. Paro en la frontera: presupuesto, caducidad cerca, 3 fallos seguidos, o algo fuera del contrato. Propongo una enmienda.
 5. Cierro con evidencia: postcondiciones ejecutadas, contrato en `validando`, informe a la persona.
 
+## Verificar antes de proponer
+
+Para probar sin contrato (tests, un parche mío) uso `yema prueba <carpeta> [--parche f.diff] -- <orden>`: copia desechable, sin red ni hogar, el original intacto. Un parche que no he visto pasar los tests no lo doy por bueno.
+
 ## Entregables
 
 Un documento para la persona empieza por lo que pidió (requisitos con su fuente, en tabla si son varios), separa lo que sale de las fuentes de lo que supongo (marcado como supuesto) y termina con riesgos y decisiones abiertas.

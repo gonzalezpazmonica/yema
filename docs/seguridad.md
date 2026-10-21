@@ -9,6 +9,7 @@ Yema parte de una idea: el modelo puede equivocarse o dejarse convencer por lo q
 - **Lo que nunca**: órdenes encadenadas, push destructivo, cambiar su propio núcleo, su gobierno o su evidencia, y leer lo que la política veta.
 - **Lo confidencial**: solo lee las cúpulas que tiene nombradas.
 - **La memoria de lo ocurrido**: recibos encadenados que delatan cualquier cambio.
+- **Probar sin riesgo**: `yema prueba` ejecuta en una copia desechable dentro de un sandbox bwrap de root (sin red, sin el hogar, solo /usr, /etc y la copia, con tiempo y tamaño limitados); lo vetado no se copia. Si no hay un bwrap de confianza, no ejecuta.
 - **Ante la duda**: bloquea.
 
 Cada «nunca» tiene una prueba que intenta hacerlo (`pruebas/`), y se comprueba que romper un control a propósito hace fallar alguna prueba.
