@@ -198,6 +198,13 @@ class TestPuerta(Entorno):
         ok, _, efecto = self.decide("Bash", {"command": "ls src"})
         self.assertEqual(efecto, "leer")  # sin declarar, el trabajo no es conocido
 
+    def test_ejecutar_pruebas_sin_contrato_sugiere_yema_prueba(self):
+        for cmd in ("cd src && python3 -m unittest discover 2>&1 | tail -40", "python3 -m pytest -q", "pytest -x",
+                    "cargo test", "npm test", "go test ./..."):
+            ok, motivo, _ = self.decide("Bash", {"command": cmd})
+            self.assertFalse(ok, cmd)
+            self.assertIn("yema prueba", motivo, cmd)
+
     def test_diff_es_lectura(self):
         ok, motivo, efecto = self.decide("Bash", {"command": "diff -u src/a.py src/b.py"})
         self.assertTrue(ok, motivo)

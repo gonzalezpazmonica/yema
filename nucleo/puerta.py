@@ -227,6 +227,8 @@ def mkdir_en_zona_libre(cmd, cwd, estado, pol):
 
 
 LECTURA_CONOCIDA = "leer-conocido"
+EJECUTA_PRUEBAS = re.compile(r"(^|[\s;&|(])(python3?\s+-m\s+(unittest|pytest)|pytest|cargo\s+test|npm\s+(run\s+)?test|"
+                             r"go\s+test|bats|mvn\s+test|gradlew?\s+test)(\s|$)")
 
 
 def carpetas_conocidas(raiz, estado):
@@ -350,6 +352,7 @@ def _ruta_de(entrada):
 
 
 QUE_HACER = (
+    ("ejecutar pruebas sin contrato", "usa «yema prueba <carpeta> -- <orden>» (copia aislada, sin red ni hogar; admite --parche)."),
     ("contrato no vigente", "propón un contrato (skill contrato) o pide a la persona que reanude el que hay."),
     ("sin contrato", "si ya tienes el contenido, guárdalo en tu memoria (~/.yema/memoria/, zona libre) para no perderlo; después propón un contrato (skill contrato) y pide su aprobación."),
     ("zona protegida", "eso solo lo cambia una persona; si hace falta, díselo con el porqué."),
@@ -412,6 +415,8 @@ def _decidir(ev, raiz, ahora=None):
             return True, "", LECTURA_CONOCIDA if lectura_en_conocidas(lectura, cwd, raiz, estado) else "leer"
         if mkdir_en_zona_libre(entrada.get("command", ""), cwd, estado, pol):
             return True, "", "escribir"
+        if EJECUTA_PRUEBAS.search(entrada.get("command", "")) and activo(raiz, pol, ahora)[0] is None:
+            return False, "ejecutar pruebas sin contrato se hace en una copia aislada", "ejecutar"
         if any(ch in METACARACTERES for ch in entrada.get("command", "")):
             return False, "orden compuesta, con redirección o sustitución: pártela en órdenes simples", "bash"
     c, motivo_c = activo(raiz, pol, ahora)
