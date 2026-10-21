@@ -60,6 +60,8 @@ def main(argv=None, raiz=None, tty=None):
     s.add_parser("resumen").add_argument("id")
     s.add_parser("cuidado")
     s.add_parser("checkpoint").add_argument("id")
+    ins = s.add_parser("instalar")
+    ins.add_argument("--bin", default=os.path.expanduser("~/.local/bin"))
     s.add_parser("copia")
     ap = s.add_parser("aprobar")
     ap.add_argument("id"), ap.add_argument("huella")
@@ -93,6 +95,8 @@ def main(argv=None, raiz=None, tty=None):
             return 1
         print(contrato.resumen(c))
         return 0
+    if a.orden == "instalar":
+        return _instalar(codigo, raiz, Path(a.bin))
     if a.orden == "cuidado":
         res = cuidado.chequeos(raiz, pol)
         for nivel, clave, msg in res:
@@ -108,6 +112,7 @@ def main(argv=None, raiz=None, tty=None):
     if a.orden == "estado":
         visible, detalle = situacion(codigo)
         print(f"{visible}: {detalle}")
+        print(f"estado privado: {raiz}")
         return 0
     if a.orden == "checkpoint":
         c = puerta._contrato_de_gobierno(raiz, a.id)
@@ -143,6 +148,28 @@ def main(argv=None, raiz=None, tty=None):
     evidencia.anotar(raiz / "evidencia" / f"{a.id}.jsonl",
                      {"contrato": a.id, "transicion": nuevo, "por": a.por, "motivo": a.motivo})
     print(f"{a.id}: {nuevo}")
+    return 0
+
+
+def _instalar(codigo, estado, bindir):
+    """Prepara el estado privado, los ajustes locales del arnés y la CLI en el PATH."""
+    for d in ("contratos/borradores", "evidencia", "memoria", "buzon/entrada", "buzon/salida", "casa", "aprobaciones"):
+        (estado / d).mkdir(parents=True, exist_ok=True)
+    os.chmod(estado, 0o700)
+    local = codigo / ".claude/settings.local.json"
+    ajustes = json.loads(local.read_text()) if local.exists() else {}
+    dirs = ajustes.setdefault("permissions", {}).setdefault("additionalDirectories", [])
+    if str(estado) not in dirs:
+        dirs.append(str(estado))
+    local.parent.mkdir(parents=True, exist_ok=True)
+    local.write_text(json.dumps(ajustes, ensure_ascii=False, indent=2) + "\n")
+    bindir.mkdir(parents=True, exist_ok=True)
+    enlace = bindir / "yema"
+    if not enlace.exists() and not enlace.is_symlink():
+        enlace.symlink_to(codigo / "bin/yema")
+    print(f"estado privado: {estado}\najustes locales: {local}\nCLI: {enlace}")
+    if str(bindir) not in os.environ.get("PATH", "").split(os.pathsep):
+        print(f"aviso: {bindir} no está en tu PATH")
     return 0
 
 

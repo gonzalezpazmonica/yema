@@ -3,8 +3,38 @@
     "PreToolUse": [
       {
         "matcher": "*",
-        "hooks": [{ "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR\"/nucleo/puerta.py", "timeout": 10 }]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/nucleo/puerta.py",
+            "timeout": 10
+          }
+        ]
       }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(yema estado)",
+      "Bash(yema estado:*)",
+      "Bash(yema resumen)",
+      "Bash(yema resumen:*)",
+      "Bash(yema validar)",
+      "Bash(yema validar:*)",
+      "Bash(yema evidencia)",
+      "Bash(yema evidencia:*)",
+      "Bash(yema checkpoint)",
+      "Bash(yema checkpoint:*)",
+      "Bash(yema cuidado)",
+      "Bash(yema cuidado:*)",
+      "Bash(yema copia)",
+      "Bash(yema copia:*)",
+      "Bash(yema admitir)",
+      "Bash(yema admitir:*)",
+      "Bash(yema suspender)",
+      "Bash(yema suspender:*)",
+      "Bash(yema revocar)",
+      "Bash(yema revocar:*)"
     ]
   }
 }

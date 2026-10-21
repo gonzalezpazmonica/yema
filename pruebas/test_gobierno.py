@@ -77,6 +77,9 @@ class TestGobierno(Entorno):
                     f"{self.cli_yema} activar C-0001 --por operadora"):
             self.assertIs(self.decide(cmd)[0], False, cmd)
 
+    def test_instalar_es_de_la_persona(self):
+        self.assertIs(self.decide(f"{self.cli_yema} instalar")[0], False)
+
     def test_suspender_y_revocar_libres(self):
         for sub in ("suspender C-0001 --por yema --motivo x", "revocar C-0001 --por yema --motivo x"):
             self.assertIs(self.decide(f"{self.cli_yema} {sub}")[0], True, sub)

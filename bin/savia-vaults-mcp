@@ -1,0 +1,12 @@
+#!/bin/sh
+# Lanza el servidor MCP de las cúpulas (SaviaVaults) sin depender del PATH del arnés.
+# Variables: SAVIA_VAULTS_NODE, SAVIA_VAULTS_DIR, SAVIA_VAULTS_DOMES.
+DIR="${SAVIA_VAULTS_DIR:-$HOME/savia/projects/savia-vaults}"
+DOMES="${SAVIA_VAULTS_DOMES:-$DIR/savia-vaults.domes.json}"
+NODE="${SAVIA_VAULTS_NODE:-$(command -v node)}"
+if [ -z "$NODE" ]; then
+  NODE=$(ls -1d "$HOME"/.nvm/versions/node/*/bin/node 2>/dev/null | sort -V | tail -1)
+fi
+[ -x "$NODE" ] || { echo "savia-vaults-mcp: no encuentro node (define SAVIA_VAULTS_NODE)" >&2; exit 1; }
+[ -f "$DIR/dist/cli/index.js" ] || { echo "savia-vaults-mcp: no encuentro $DIR/dist/cli/index.js (define SAVIA_VAULTS_DIR)" >&2; exit 1; }
+exec "$NODE" "$DIR/dist/cli/index.js" serve --transport mcp --domes "$DOMES"

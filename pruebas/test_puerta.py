@@ -138,6 +138,28 @@ class TestPuerta(Entorno):
         self.assertIn("núcleo", motivo)
         self.assertTrue(self.decide("Bash", {"command": "python3 src/a.py"})[0])
 
+    def test_compuesta_sin_contrato_dice_partir(self):
+        ok, motivo, _ = self.decide("Bash", {"command": "cd src && ls"})
+        self.assertFalse(ok)
+        self.assertIn("pártela", motivo)
+
+    def test_skill_es_interna(self):
+        self.assertTrue(self.decide("Skill", {"skill": "contrato"})[0])
+
+    def test_lectores_inertes_sin_contrato(self):
+        for cmd in ("ls -la src", "find src -name '*.py'", "cat src/a.py", "head -5 src/a.py", "wc -l src/a.py",
+                    "grep -n foo src/a.py", "tree src", "pwd", "stat src"):
+            ok, motivo, efecto = self.decide("Bash", {"command": cmd})
+            self.assertTrue(ok, f"{cmd}: {motivo}")
+            self.assertEqual(efecto, "leer")
+
+    def test_lectores_que_no_son_inertes(self):
+        for cmd in ("find src -delete", "find . -exec rm {} +", "find . -execdir sh", "find . -fprint /tmp/x",
+                    "find . -ok rm", "ls src; rm -r src", "cat src/a.py > /tmp/x", "grep -r x . | sh",
+                    "cat ~/.ssh/id_ed25519", "grep -r token ~/.ssh", "sed -i s/a/b/ src/a.py", "rm src/a.py",
+                    "grep -r x --include=*.env .", "grep -R x .", "/tmp/cat src/a.py", "head src/prod.env"):
+            self.assertFalse(self.decide("Bash", {"command": cmd})[0], cmd)
+
     def test_herramienta_desconocida(self):
         self.activar(aprobado(self.trabajo))
         self.assertFalse(self.decide("Teletransporte", {})[0])

@@ -195,6 +195,22 @@ class TestGarantiasPorElHookReal(unittest.TestCase):
         env = {**os.environ, "CLAUDE_PROJECT_DIR": str(RAIZ), "YEMA_ESTADO": str(self.estado)}
         return subprocess.run(self.orden, shell=True, input=json.dumps(ev), capture_output=True, text=True, env=env)
 
+    def test_el_contrato_es_el_permiso_del_arnes(self):
+        import shutil
+        r = self.hook("Bash", {"command": f"python3 {RAIZ}/nucleo/yema.py estado"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout)["hookSpecificOutput"]["permissionDecision"], "allow")
+        r = self.hook("Read", {"file_path": str(self.trabajo / "src/a.py")})
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(r.stdout.strip(), "")  # las lecturas las sigue decidiendo el arnés
+        c = base(self.trabajo)
+        c["autoridad"]["caduca"] = "2999-01-01T00:00:00+00:00"
+        c = sellar(c)
+        (self.estado / "contratos/C-0001.json").write_text(json.dumps(c))
+        (self.estado / "contratos/ACTIVO").write_text("C-0001")
+        r = self.hook("Write", {"file_path": str(self.trabajo / "src/a.py")})
+        self.assertEqual(json.loads(r.stdout)["hookSpecificOutput"]["permissionDecision"], "allow", r.stderr)
+
     def test_garantias(self):
         casos = [
             ("leer sin contrato", "Read", {"file_path": str(self.trabajo / "src/a.py")}, 0),

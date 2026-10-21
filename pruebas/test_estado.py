@@ -69,7 +69,7 @@ class TestEstadoExterno(Entorno):
         c, _ = contrato.transicion(c, "activo", "operadora", "x", politica(), AHORA)
         self.activar(c)
         self.assertTrue(self.decide("Bash", {"command": f"bash {script}"})[0])
-        self.assertFalse(self.decide("Bash", {"command": f"cat {self.estado}/contratos/C-0001.json"})[0])
+        self.assertFalse(self.decide("Bash", {"command": f"cp src/a.py {self.estado}/contratos/C-0001.json"})[0])
 
 
 if __name__ == "__main__":

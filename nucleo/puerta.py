@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from nucleo import contrato, evidencia  # noqa: E402
 
-INTERNAS = {"TodoWrite", "AskUserQuestion", "ToolSearch", "EnterPlanMode", "ExitPlanMode", "ListAgents"}
+INTERNAS = {"TodoWrite", "AskUserQuestion", "ToolSearch", "EnterPlanMode", "ExitPlanMode", "ListAgents", "Skill"}
 LECTURA = {"Read", "Glob", "Grep", "LS", "NotebookRead"}
 ESCRITURA = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 RED = {"WebFetch", "WebSearch"}
@@ -30,6 +30,10 @@ GOBIERNO_LIBRE = {"estado", "validar", "resumen", "evidencia", "admitir", "suspe
                   "checkpoint"}
 TRANSICIONES_LIBRES = {"borrador", "cuestionado", "candidato", "en_revision", "rechazado", "validando"}
 MODOS_SIN_PREGUNTA = {"bypassPermissions", "dontAsk", "auto"}
+# Lectores inertes: leen o listan, no escriben ni ejecutan otros programas. Sin ellos no hay E0 útil.
+LECTORES = {"ls", "find", "cat", "head", "tail", "wc", "grep", "tree", "pwd", "stat", "file", "du", "realpath"}
+FIND_PELIGROSO = {"-exec", "-execdir", "-ok", "-okdir", "-delete", "-fprint", "-fprint0", "-fprintf", "-fls"}
+GREP_RECURSIVO = ("-r", "-R", "--recursive", "--dereference-recursive", "-d", "--directories")
 
 
 class _Preguntar:
@@ -173,6 +177,25 @@ def orden_de_gobierno(cmd, raiz, cwd):
     return None
 
 
+def lector_inerte(cmd, cwd, pol):
+    """True si la orden solo lee o lista y no toca nada vetado por la política."""
+    if any(ch in METACARACTERES for ch in cmd):
+        return False
+    try:
+        toks = shlex.split(cmd)
+    except ValueError:
+        return False
+    if not toks or "/" in toks[0] or toks[0] not in LECTORES:
+        return False
+    args = toks[1:]
+    if toks[0] == "find" and any(a in FIND_PELIGROSO for a in args):
+        return False
+    if toks[0] == "grep" and any(a in GREP_RECURSIVO or (a.startswith("-") and not a.startswith("--") and "r" in a.lower())
+                                 for a in args):
+        return False
+    return not any(_vetada(_real(a, cwd), pol) for a in args if not a.startswith("-"))
+
+
 def _contrato_de_gobierno(estado, cid):
     if not cid or "/" in cid:
         return None
@@ -225,7 +248,7 @@ def _ruta_de(entrada):
 
 QUE_HACER = (
     ("contrato no vigente", "propón un contrato (skill contrato) o pide a la persona que reanude el que hay."),
-    ("sin contrato", "propón un contrato (skill contrato) y pide su aprobación."),
+    ("sin contrato", "si ya tienes el contenido, guárdalo en tu memoria (~/.yema/memoria/, zona libre) para no perderlo; después propón un contrato (skill contrato) y pide su aprobación."),
     ("zona protegida", "eso solo lo cambia una persona; si hace falta, díselo con el porqué."),
     ("lectura vetada", "no lo leas; si de verdad lo necesitas, pide a la persona solo el dato."),
     ("orden compuesta", "pártela en órdenes simples, una por llamada."),
@@ -281,6 +304,10 @@ def _decidir(ev, raiz, ahora=None):
         args = orden_de_gobierno(entrada.get("command", ""), raiz, cwd)
         if args is not None:
             return decidir_gobierno(args, ev, estado)
+        if lector_inerte(entrada.get("command", ""), cwd, pol):
+            return True, "", "leer"
+        if any(ch in METACARACTERES for ch in entrada.get("command", "")):
+            return False, "orden compuesta, con redirección o sustitución: pártela en órdenes simples", "bash"
     c, motivo_c = activo(raiz, pol, ahora)
     ruta = _ruta_de(entrada)
     real = _real(ruta, cwd) if ruta else None
@@ -375,13 +402,19 @@ def main():
     raiz = Path(os.environ.get("YEMA_RAIZ") or Path(__file__).resolve().parent.parent)
     try:
         ev = json.loads(sys.stdin.read())
-        ok, motivo, _ = evaluar_y_registrar(ev, raiz)
+        ok, motivo, efecto = evaluar_y_registrar(ev, raiz)
     except Exception as e:  # falla cerrado
         print(f"YEMA: puerta en error, bloqueo: {e}", file=sys.stderr)
         return 2
     if ok is PREGUNTAR:
         print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "ask",
                                                  "permissionDecisionReason": motivo}}, ensure_ascii=False))
+        return 0
+    if ok and efecto not in ("leer", "interno"):
+        # El contrato es el permiso: lo concedido no se vuelve a preguntar paso a paso.
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow",
+                                                 "permissionDecisionReason": f"Yema: {efecto} concedido"}},
+                         ensure_ascii=False))
         return 0
     if not ok:
         print(f"YEMA: {motivo}", file=sys.stderr)
