@@ -130,6 +130,8 @@ Pensada para la persona; Yema la usa en la conversación y la puerta decide qué
 | `yema prueba <carpeta> [--parche f.diff] -- <orden>` | Ejecuta en una copia aislada (bwrap de root, sin red, sin hogar, con límites); el original no cambia | Sí |
 | `yema cuidado` | Permisos, copias, disco, descanso | Sí |
 | `yema copia` | Copia del estado privado (rota las viejas) | Sí |
+| `yema savia <palabras>` | Busca una capacidad de Savia (skill, comando o script) en su mapa | Sí |
+| `yema aprende --cuando … --leccion … --evidencia … --confianza …` | Deja una lección para Savia en el buzón; sin evidencia no se guarda | Sí |
 
 ---
 
@@ -225,7 +227,7 @@ Detalle en [`docs/arquitectura.md`](docs/arquitectura.md).
 
 ## Resultados frente a Savia
 
-En una evaluación a ciegas con tres tareas y el mismo modelo, Yema sacó 24 de 24 frente a 20,8 de Savia, con menos coste. En la tarea de código entregó 5 de 5 parches que pasan los tests, frente a 0 de 5, aunque tardó unos segundos más porque verifica. Detalle y límites en [`docs/evaluacion.md`](docs/evaluacion.md).
+En una evaluación a ciegas con tres tareas y el mismo modelo, Yema sacó 24 de 24 frente a 20,8 de Savia, con menos coste. En la tarea de código entregó 5 de 5 parches que pasan los tests, frente a 0 de 5, aunque tardó unos segundos más porque verifica. En la lectura de una cúpula de conocimiento (E8), la primera ronda dio 7,0 a Yema frente a 1,5 a Savia. Esa ronda no vale: Savia no tenía permiso para sus herramientas de cúpula. Repetida en igualdad de herramientas, Yema saca 6,83 y Savia 6,17, una ventaja modesta. Savia fue un 21 % más rápida. Detalle y límites en [`docs/evaluacion.md`](docs/evaluacion.md).
 
 ## Estado
 

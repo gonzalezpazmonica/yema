@@ -48,3 +48,17 @@ Antes de la primera release, Yema se comparó con Savia (su madre, un arnés de 
 - El modelo es el mismo en las dos: se mide el arnés.
 - El anonimato es imperfecto: Yema habla de «contrato» y «puerta».
 - Parte de la ventaja de coste de una ronda se debía a la caché; al alternar el orden bajó de −44 % a −12 %.
+
+## E8 · Responder desde una cúpula (tarea D)
+
+Pregunta sobre una nota técnica de la cúpula pública de referencia y sobre un tema que la cúpula no cubre. Criterios D1–D7 fijados antes, 3 repeticiones por agente, jueza ciega.
+
+| Ronda | Savia | Yema | Nota |
+|---|---|---|---|
+| 1 | 1,5 | 7,0 | **No vale.** En modo headless el arnés negó a Savia las herramientas de cúpula y ella dijo honestamente que no podía leer. Medía acceso, no razonamiento. |
+| 2 (igualdad) | 6,17 | **6,83** | Savia con las mismas lecturas de cúpula que tiene en uso interactivo. Las seis respuestas son fiables; la diferencia está en la literalidad. |
+
+Ronda 2: reloj medio de 22,6 s para Savia y 28,5 s para Yema. Coste medio de 0,24 $ y 0,30 $; en mediana, 0,26 $ y 0,16 $, porque la primera ejecución de Yema fue sin caché.
+
+**Lección:** una evaluación comparativa tiene que dar a las dos agentes las herramientas que tienen en uso real. Si no, mide la configuración y no a la agente.
+
