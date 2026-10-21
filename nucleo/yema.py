@@ -66,7 +66,7 @@ def main(argv=None, raiz=None, tty=None):
     pr.add_argument("carpeta")
     pr.add_argument("--parche")
     pr.add_argument("--tiempo", type=int, default=120)
-    pr.add_argument("orden_prueba", nargs=argparse.REMAINDER)
+    pr.add_argument("orden_prueba", nargs="*")
     ins = s.add_parser("instalar")
     ins.add_argument("--bin", default=os.path.expanduser("~/.local/bin"))
     s.add_parser("copia")
@@ -74,7 +74,14 @@ def main(argv=None, raiz=None, tty=None):
     ap.add_argument("id"), ap.add_argument("huella")
     ap.add_argument("--por", default=None)
     ap.add_argument("--motivo", default="aprobado por la persona")
+    argv = list(sys.argv[1:] if argv is None else argv)
+    resto = []
+    if argv[:1] == ["prueba"] and "--" in argv:
+        corte = argv.index("--")
+        argv, resto = argv[:corte], argv[corte + 1:]
     a = p.parse_args(argv)
+    if a.orden == "prueba":
+        a.orden_prueba = list(a.orden_prueba) + resto
     pol = json.loads((raiz / "gobierno/politica.json").read_text(encoding="utf-8"))
     codigo, raiz = raiz, puerta.estado_de(raiz, pol)
 

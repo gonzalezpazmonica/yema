@@ -123,6 +123,20 @@ class TestCliPrueba(Entorno):
         self.assertNotEqual(rc, 0)
         self.assertIn("FAILED", out.getvalue())
 
+    def test_cli_parche_en_cualquier_orden(self):
+        (self.trabajo / "m.py").write_text(CODIGO)
+        (self.trabajo / "test_m.py").write_text(TEST)
+        parche = Path(self.tmp.name) / "p.diff"
+        parche.write_text(PARCHE)
+        estado = Path(self.tmp.name) / "estado"
+        (self.yema / "gobierno/politica.json").write_text(json.dumps({**politica(), "estado": str(estado)}))
+        for args in (["prueba", str(self.trabajo), "--parche", str(parche), "--", "python3", "-m", "unittest", "-q"],
+                     ["prueba", "--parche", str(parche), str(self.trabajo), "--", "python3", "-m", "unittest", "-q"]):
+            out = io.StringIO()
+            with redirect_stdout(out):
+                rc = yema.main(args, raiz=self.yema, tty=False)
+            self.assertEqual(rc, 0, out.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()
