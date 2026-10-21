@@ -67,10 +67,17 @@ class TestGobierno(Entorno):
         self.assertIn("huella", motivo)
 
     def test_aprobar_en_modo_sin_preguntas_se_deniega(self):
-        for modo in ("bypassPermissions", "dontAsk", "auto"):
+        for modo in ("bypassPermissions", "dontAsk"):
             ok, motivo, _ = self.decide(f"{self.cli_yema} aprobar C-0001 {self.h8}", modo)
             self.assertIs(ok, False, modo)
             self.assertIn("modo", motivo)
+
+    def test_aprobar_en_modo_auto_pregunta(self):
+        # El modo auto de Claude Code sigue mostrando los diálogos que fuerza un hook:
+        # la persona aprueba desde el harness, sin consola.
+        ok, motivo, _ = self.decide(f"{self.cli_yema} aprobar C-0001 {self.h8}", "auto")
+        self.assertIs(ok, puerta.PREGUNTAR)
+        self.assertIn(self.h8, motivo)
 
     def test_transicion_humana_directa_denegada(self):
         for cmd in (f"{self.cli_yema} transicion C-0001 aprobado --por operadora",

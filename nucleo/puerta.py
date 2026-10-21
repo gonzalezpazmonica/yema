@@ -38,7 +38,7 @@ IDENTIDAD = ("AGENTS.md", "CLAUDE.md", "ALMA.md")
 GOBIERNO_LIBRE = {"estado", "validar", "resumen", "evidencia", "admitir", "suspender", "revocar", "cuidado", "copia",
                   "checkpoint", "prueba", "savia"}
 TRANSICIONES_LIBRES = {"borrador", "cuestionado", "candidato", "en_revision", "rechazado", "validando"}
-MODOS_SIN_PREGUNTA = {"bypassPermissions", "dontAsk", "auto"}
+MODOS_SIN_PREGUNTA = {"bypassPermissions", "dontAsk"}
 # Lectores inertes: leen o listan, no escriben ni ejecutan otros programas. Sin ellos no hay E0 útil.
 LECTORES = {"ls", "find", "cat", "head", "tail", "wc", "grep", "tree", "pwd", "stat", "file", "du", "realpath", "diff"}
 FIND_PELIGROSO = {"-exec", "-execdir", "-ok", "-okdir", "-delete", "-fprint", "-fprint0", "-fprintf", "-fls"}

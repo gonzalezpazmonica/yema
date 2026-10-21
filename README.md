@@ -67,7 +67,8 @@ Aprobar un contrato es la única puerta a la autonomía, así que no puede depen
 
 - La **huella** (`3fa9c210`) ata lo que ves a lo que se aprueba: si alguien cambia una coma del contrato, la huella deja de casar y la aprobación se rechaza.
 - La puerta deja un **ticket de un solo uso** que caduca en 5 minutos; sin él, la CLI no aprueba nada fuera de una terminal humana.
-- En modos sin preguntas (`bypassPermissions`, `dontAsk`, `auto`) la aprobación se **deniega**: no hay diálogo que contestar.
+- En el modo `auto` de Claude Code (el de serie) el diálogo **sí aparece**: los diálogos que fuerza un hook no los decide el clasificador. Apruebas desde la conversación, también desde el móvil.
+- En modos sin preguntas (`bypassPermissions`, `dontAsk`) la aprobación se **deniega**: no hay diálogo que contestar.
 
 ---
 
