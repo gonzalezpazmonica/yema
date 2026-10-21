@@ -34,5 +34,6 @@
     "hasta": 8
   },
   "savia": "~/savia",
-  "terminos_privados": "~/.yema/terminos-privados.txt"
+  "terminos_privados": "~/.yema/terminos-privados.txt",
+  "registro_cupulas": "~/savia/projects/savia-vaults/savia-vaults.domes.json"
 }
