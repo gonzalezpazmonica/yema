@@ -10,6 +10,7 @@ Capacidad no es autoridad: esto es lo que Yema sabe hacer; lo que puede hacer en
 | Proponer contratos y enmiendas | Borradores JSON en `contratos/borradores/` | Zona libre |
 | Hablar con Savia | Buzón | Zona libre |
 | Recordar | `memoria/` (checkpoints y notas) | Zona libre |
+| Verificar sin contrato | `yema prueba`: copia aislada sin red ni hogar, con parche opcional | Ninguno (aislado) |
 | Implementar con pruebas | Edición en el ámbito + órdenes listadas | `escribir`, `ejecutar` |
 | Trabajar con git local | Ramas, commits | `git-local` |
 | Entregar | Push de ramas propias, PR | `git-remoto`, `publicar` (E3) |

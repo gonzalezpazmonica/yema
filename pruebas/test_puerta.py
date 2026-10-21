@@ -246,15 +246,15 @@ class TestPuerta(Entorno):
     def test_cupulas_solo_por_nombre_permitido(self):
         self.assertTrue(self.decide("mcp__savia-vaults__vault_read", {"dome": "savia-docs", "path": "a.md"})[0])
         self.assertFalse(self.decide("mcp__savia-vaults__vault_search", {"query": "x"})[0])
-        self.assertFalse(self.decide("mcp__savia-vaults__vault_read", {"dome": "SaviaLabs", "path": "a.md"})[0])
+        self.assertFalse(self.decide("mcp__savia-vaults__vault_read", {"dome": "CupulaPrivada", "path": "a.md"})[0])
         c = aprobado(self.trabajo)
-        c["contexto"] = {"cupulas": ["SaviaLabs"]}
+        c["contexto"] = {"cupulas": ["CupulaPrivada"]}
         c["estado"] = "en_revision"
         c, _ = contrato.transicion(c, "aprobado", "operadora", "x", politica(), AHORA)
         c, _ = contrato.transicion(c, "aprovisionado", "operadora", "x", politica(), AHORA)
         c, _ = contrato.transicion(c, "activo", "operadora", "x", politica(), AHORA)
         self.activar(c)
-        self.assertTrue(self.decide("mcp__savia-vaults__vault_read", {"dome": "SaviaLabs", "path": "a.md"})[0])
+        self.assertTrue(self.decide("mcp__savia-vaults__vault_read", {"dome": "CupulaPrivada", "path": "a.md"})[0])
 
     def test_contrato_revocado_vuelve_a_e0(self):
         c, _ = contrato.transicion(aprobado(self.trabajo), "revocado", "operadora", "fin", politica(), AHORA)

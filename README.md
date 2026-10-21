@@ -73,12 +73,11 @@ Aprobar un contrato es la única puerta a la autonomía, así que no puede depen
 
 ## Empezar
 
-Requisitos: Python 3.10+ (sin dependencias) y un arnés que ejecute hooks `PreToolUse` (hoy, Claude Code).
+Requisitos: Python 3.10+ (sin dependencias), un arnés que ejecute hooks `PreToolUse` (hoy, Claude Code) y, para `yema prueba`, bubblewrap instalado por el sistema (`/usr/bin/bwrap`, de root).
 
 ```bash
 git clone https://github.com/gonzalezpazmonica/yema.git && cd yema
-mkdir -p ~/.yema/{contratos/borradores,evidencia,memoria,buzon/entrada,buzon/salida,casa,aprobaciones} && chmod 700 ~/.yema
-ln -s "$PWD/bin/yema" ~/.local/bin/yema        # opcional: la CLI en tu PATH
+bin/yema instalar                              # estado privado en ~/.yema, ajustes locales y CLI en ~/.local/bin
 python3 -m unittest discover -s pruebas        # el núcleo se prueba a sí mismo
 yema cuidado                                   # salud de la casa
 claude                                         # y a hablar con ella
@@ -203,6 +202,7 @@ Detalle en [`docs/arquitectura.md`](docs/arquitectura.md).
 | [`docs/comunicacion.md`](docs/comunicacion.md) | Persona, Savia (buzón) y cúpulas |
 | [`docs/casa-space.md`](docs/casa-space.md) | Savia Space, la casa |
 | [`docs/poda.md`](docs/poda.md) | Qué heredó de Savia y con qué criterio |
+| [`docs/evaluacion.md`](docs/evaluacion.md) | Evaluación a ciegas frente a Savia y lecciones |
 | [`ALMA.md`](ALMA.md) | Nombre, linaje, valores, voz |
 | [`ROADMAP.md`](ROADMAP.md) | Fases con criterios de salida y de abandono |
 
@@ -222,9 +222,13 @@ Detalle en [`docs/arquitectura.md`](docs/arquitectura.md).
 
 ---
 
+## Resultados frente a Savia
+
+En una evaluación a ciegas con tres tareas y el mismo modelo, Yema sacó 24 de 24 frente a 20,8 de Savia, con menos coste. En la tarea de código entregó 5 de 5 parches que pasan los tests, frente a 0 de 5, aunque tardó unos segundos más porque verifica. Detalle y límites en [`docs/evaluacion.md`](docs/evaluacion.md).
+
 ## Estado
 
-Fase F0 completa (núcleo, gobierno por conversación, cuidado). En curso: F1, la línea base frente a Savia. Ver [`ROADMAP.md`](ROADMAP.md).
+Versión 0.1.0. F0 completa; F1 (línea base) con primeros resultados. Ver [`ROADMAP.md`](ROADMAP.md) y [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Licencia
 

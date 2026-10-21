@@ -8,7 +8,9 @@ Núcleo (contrato, puerta, evidencia, CLI) con 122 pruebas, incluidas las negati
 Gobierno por conversación (aprobar con el diálogo nativo), cuidado (`yema cuidado`, `yema copia`), skills `contrato`, `cuidado` y `relevo-savia`. Ideas de ODD con control en código: prueba de reanudación, cuatro estados, checkpoint con forma fija, tests preexistentes intocables, rechazos que dicen qué hacer y garantías probadas por el hook real.
 Alma, gobernanza, criterio, arquitectura, comunicación, conversación, seguridad, relevo, cuidado, casa y poda escritas. Contrato de ejemplo en `ejemplos/`; los reales, en el estado privado.
 
-## F1 · Línea base y poda
+## F1 · Línea base y poda — en curso
+
+Primeros resultados en `docs/evaluacion.md` (tres tareas pequeñas, a ciegas): Yema 24/24 frente a 20,8 de Savia. Falta medir trabajo largo bajo contrato y el inventario de poda.
 
 - 20 tareas reales del historial de Savia (PRs y arreglos recientes) en `evals/`, con métricas: tokens, tiempo de reloj, intervenciones humanas, defectos encontrados después.
 - Inventario A/B/C/D de Savia con coste en tokens.
