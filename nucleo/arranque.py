@@ -12,7 +12,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 def main():
     try:
-        sys.stdin.read()
+        try:
+            ev = json.loads(sys.stdin.read() or "{}")
+        except ValueError:
+            ev = {}
         from nucleo import puerta, yema
         codigo = Path(os.environ.get("YEMA_RAIZ") or Path(__file__).resolve().parent.parent)
         pol = json.loads((codigo / "gobierno/politica.json").read_text(encoding="utf-8"))
@@ -28,6 +31,12 @@ def main():
             hay.append("pytest" if pt else "sin pytest (usa python3 -m unittest)")
         ctx = (f"Yema · {visible}: {detalle}. Estado privado: {estado} (borradores en {estado}/contratos/borradores, "
                f"memoria en {estado}/memoria). CLI: yema. Herramientas: {', '.join(hay) or 'ninguna'}.")
+        c, _ = puerta.activo(codigo, pol, None)
+        if c:
+            base = os.path.realpath(c["ambito"]["raiz"])
+            cwd = os.path.realpath(ev.get("cwd") or os.getcwd())
+            if cwd != base and not cwd.startswith(base + os.sep):
+                ctx += f" Órdenes del contrato: «cd {base} && <orden>»."
         print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": ctx}},
                          ensure_ascii=False))
     except Exception:
