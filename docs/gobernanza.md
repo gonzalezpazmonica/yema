@@ -25,7 +25,7 @@ Opcionales: `contexto` (cúpulas permitidas, fuentes), `spec`, `condiciones` (`p
 - `ambito.pruebas` / `ambito.pruebas_editables`: los tests que ya existían y casan con `pruebas` no se pueden modificar salvo que estén en `pruebas_editables`. Los tests nuevos, sí.
 
 - `ambito.raiz`: directorio absoluto donde se trabaja. `ambito.escritura` / `ambito.vetadas`: globs relativos.
-- `autoridad.efectos` / `autoridad.prohibidos`: de `leer, escribir, ejecutar, red, git-local, git-remoto, fusionar, publicar, delegar, escribir-cupula`.
+- `autoridad.efectos` / `autoridad.prohibidos`: de `leer, escribir, borrar, ejecutar, red, git-local, git-remoto, fusionar, publicar, delegar, escribir-cupula`.
 - `autoridad.ordenes`: prefijos de orden permitidos (`python3 -m unittest`, `cargo test`…). Las órdenes compuestas se rechazan siempre.
 - `autoridad.caduca`: obligatoria. Sin caducidad no hay contrato.
 - `recursos.efectos_max`: presupuesto de efectos materiales.
@@ -62,3 +62,33 @@ borrador → cuestionado → candidato → en_revision → aprobado → aprovisi
 - La puerta solo ve lo que el arnés le enseña. Si el arnés no pasa una herramienta por el hook, no la controla.
 - El diálogo y la terminal prueban que alguien con acceso a la sesión contestó, no quién. La firma llega en la v1.
 - El presupuesto cuenta efectos, no tokens: el arnés no expone el consumo al hook.
+
+## Aprobación firmada (F4)
+
+Con `firma_aprobacion: true` en la política, aprobar no basta con cambiar el estado del contrato:
+- `yema aprobar`, tras el diálogo o en la terminal de la persona, firma con HMAC-SHA256 el identificador, la versión, la huella, quién aprobó y cuándo.
+- La firma usa un secreto local en `<estado>/llaves/` (permisos 0600) que solo crea y usa la CLI.
+- La puerta solo da por vigente un contrato cuya firma verifica.
+
+La agente no puede leer el secreto: la puerta veta cualquier ruta bajo `llaves/`, también con comodines y con Grep sobre una carpeta que la contenga. Tampoco puede escribirlo, porque está fuera de las zonas libres. Así que no puede fabricar un contrato «aprobado» editando el JSON aunque encontrara la manera.
+
+Sigue sin cubrir lo que pase fuera de la puerta, como un proceso con acceso al disco. La firma con la clave de la persona o de Space queda para la mudanza (F3).
+
+Al activar la firma, los contratos aprobados antes dejan de valer y hay que volver a aprobarlos.
+
+## Comodines y búsquedas en lecturas vetadas
+
+Un comodín (`cat ~/.s*/id_*`) se juzga por lo que abriría al ejecutarse, no por su texto. Una búsqueda con Grep no puede abarcar una carpeta que contenga algo vetado, porque leería su contenido sin nombrarlo.
+
+## Borrar es un efecto aparte
+
+`rm`, `rmdir`, `unlink`, `shred`, `git rm`, `git clean` y `git branch -d/-D` exigen el efecto `borrar`. Conceder `escribir` ya no permite borrar.
+
+## La aprobación fija la política
+
+Con la firma activada, la aprobación guarda la huella de `gobierno/politica.json`. Si la política cambia después (otra cúpula legible, otra zona libre), el contrato deja de ser vigente hasta que la persona lo vuelva a aprobar: nadie trabaja con reglas que no vio al decir «sí».
+
+## Secretos fuera de los motivos y de la evidencia
+
+Los rechazos de la puerta citan la orden. Antes de mostrarlos o guardarlos, se sustituye por `***` todo lo que parezca un secreto: tokens de GitHub, OpenAI o AWS, credenciales en una URL y valores de `password=`, `token=`, `--token` y similares.
+

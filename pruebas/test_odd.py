@@ -208,6 +208,15 @@ class TestGarantiasPorElHookReal(unittest.TestCase):
         c = sellar(c)
         (self.estado / "contratos/C-0001.json").write_text(json.dumps(c))
         (self.estado / "contratos/ACTIVO").write_text("C-0001")
+        # La política pública exige firma: sin ella, el contrato no vale ni a través del hook real.
+        r = self.hook("Write", {"file_path": str(self.trabajo / "src/a.py")})
+        self.assertEqual(r.returncode, 2, r.stdout)
+        self.assertIn("firma", r.stderr)
+        from nucleo import firma, puerta
+        c["autoridad"]["aprobacion"]["politica"] = puerta.huella_politica(  # como «yema aprobar»
+            json.loads((RAIZ / "gobierno/politica.json").read_text()))
+        c["autoridad"]["aprobacion"]["firma"] = firma.firmar(c, firma.clave(self.estado, crear=True))
+        (self.estado / "contratos/C-0001.json").write_text(json.dumps(c))
         r = self.hook("Write", {"file_path": str(self.trabajo / "src/a.py")})
         self.assertEqual(json.loads(r.stdout)["hookSpecificOutput"]["permissionDecision"], "allow", r.stderr)
 
