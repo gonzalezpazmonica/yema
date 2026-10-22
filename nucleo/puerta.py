@@ -349,7 +349,8 @@ def es_grep_recursivo(a):
 
 
 def grep_recursivo_en_ambito(cmd, cwd, pol, base, estado):
-    """grep -r como lectura si todo lo que recorre está dentro del ámbito y no abarca nada vetado."""
+    """grep -r como lectura si todo lo que recorre está dentro del ámbito (o de alguna de las
+    carpetas, si `base` es una lista) y no abarca el estado privado ni nada vetado."""
     if not lector_inerte(cmd, cwd, pol, recursivo=True):
         return False
     toks = shlex.split(cmd)
@@ -363,8 +364,9 @@ def grep_recursivo_en_ambito(cmd, cwd, pol, base, estado):
         if "/" in g:
             fijo = re.split(r"[*?\\[]", g, maxsplit=1)[0]
             zonas.append(Path(os.path.realpath(fijo if fijo.endswith("/") else os.path.dirname(fijo) or "/")))
+    bases = base if isinstance(base, list) else [base]
     for r in rutas:
-        if not _dentro(r, base):
+        if not any(_dentro(r, b) for b in bases):
             return False
         if r.is_dir() and any(z == r or r in z.parents for z in zonas):
             return False
@@ -673,6 +675,8 @@ def _decidir(ev, raiz, ahora=None):
         if args is not None:
             return decidir_gobierno(args, ev, estado)
         lectura = sin_redireccion_inocua(entrada.get("command", ""))
+        if grep_recursivo_en_ambito(lectura, cwd, pol, carpetas_conocidas(raiz, estado), estado):
+            return True, "", LECTURA_CONOCIDA  # leer es libre en carpetas conocidas, también recursivo
         if lector_inerte(lectura, cwd, pol) or lectura_encadenada(lectura, cwd, pol, raiz):
             return True, "", LECTURA_CONOCIDA if lectura_en_conocidas(lectura, cwd, raiz, estado) else "leer"
         if mkdir_en_zona_libre(entrada.get("command", ""), cwd, estado, pol):

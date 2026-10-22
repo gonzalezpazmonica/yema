@@ -92,3 +92,11 @@ Con la firma activada, la aprobación guarda la huella de `gobierno/politica.jso
 
 Los rechazos de la puerta citan la orden. Antes de mostrarlos o guardarlos, se sustituye por `***` todo lo que parezca un secreto: tokens de GitHub, OpenAI o AWS, credenciales en una URL y valores de `password=`, `token=`, `--token` y similares.
 
+## Buscar dentro de las carpetas es leer
+
+`grep -r` es una lectura. Sin contrato se permite en las carpetas conocidas (el repo de Yema, su estado, las declaradas en la configuración local o en `YEMA_CARPETAS`), y con contrato dentro de su ámbito. En los dos casos, solo si lo que recorre no abarca el estado privado ni nada vetado. Una búsqueda en una carpeta desconocida sigue denegada.
+
+## Aprobar con `!` no vale
+
+Lanzar `yema aprobar` con `!` desde Claude Code no tiene terminal ni pasa por el diálogo, así que la puerta no puede distinguir a una persona de la agente. Se aprueba en el diálogo («aprueba C-0002») o en una terminal propia.
+
