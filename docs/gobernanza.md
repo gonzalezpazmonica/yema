@@ -62,3 +62,21 @@ borrador → cuestionado → candidato → en_revision → aprobado → aprovisi
 - La puerta solo ve lo que el arnés le enseña. Si el arnés no pasa una herramienta por el hook, no la controla.
 - El diálogo y la terminal prueban que alguien con acceso a la sesión contestó, no quién. La firma llega en la v1.
 - El presupuesto cuenta efectos, no tokens: el arnés no expone el consumo al hook.
+
+## Aprobación firmada (F4)
+
+Con `firma_aprobacion: true` en la política, aprobar no basta con cambiar el estado del contrato:
+- `yema aprobar`, tras el diálogo o en la terminal de la persona, firma con HMAC-SHA256 el identificador, la versión, la huella, quién aprobó y cuándo.
+- La firma usa un secreto local en `<estado>/llaves/` (permisos 0600) que solo crea y usa la CLI.
+- La puerta solo da por vigente un contrato cuya firma verifica.
+
+La agente no puede leer el secreto: la puerta veta cualquier ruta bajo `llaves/`, también con comodines y con Grep sobre una carpeta que la contenga. Tampoco puede escribirlo, porque está fuera de las zonas libres. Así que no puede fabricar un contrato «aprobado» editando el JSON aunque encontrara la manera.
+
+Sigue sin cubrir lo que pase fuera de la puerta, como un proceso con acceso al disco. La firma con la clave de la persona o de Space queda para la mudanza (F3).
+
+Al activar la firma, los contratos aprobados antes dejan de valer y hay que volver a aprobarlos.
+
+## Comodines y búsquedas en lecturas vetadas
+
+Un comodín (`cat ~/.s*/id_*`) se juzga por lo que abriría al ejecutarse, no por su texto. Una búsqueda con Grep no puede abarcar una carpeta que contenga algo vetado, porque leería su contenido sin nombrarlo.
+

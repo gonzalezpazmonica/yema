@@ -27,7 +27,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from nucleo import aislado, buzon, contrato, cuidado, evidencia, puerta  # noqa: E402
+from nucleo import aislado, buzon, contrato, cuidado, evidencia, firma, puerta  # noqa: E402
 
 HUMANAS = {"aprobado", "activo"}
 VENTANA_TICKET_S = 300
@@ -173,6 +173,8 @@ def main(argv=None, raiz=None, tty=None):
     if err:
         print(err, file=sys.stderr)
         return 1
+    if nuevo == "aprobado" and pol.get("firma_aprobacion"):
+        c["autoridad"]["aprobacion"]["firma"] = firma.firmar(c, firma.clave(raiz, crear=True))
     contrato.guardar(ruta, c)
     punt = raiz / "contratos/ACTIVO"
     if nuevo == "activo":
@@ -265,8 +267,8 @@ def situacion(codigo, ahora=None):
         c = contrato.cargar(ruta)
         if c["estado"] == "validando":
             return "Comprobando", f"{cid}: ejecutando las postcondiciones"
-        vale, motivo = contrato.vigente(c, pol, ahora)
-        if not vale:
+        vigente, motivo = puerta.activo(codigo, pol, ahora)  # lo mismo que aplica la puerta: firma, política…
+        if vigente is None:
             return "Necesita tu decisión", f"{cid}: {motivo}"
         usados = puerta.efectos_usados(raiz / "evidencia" / f"{cid}.jsonl")
         if usados >= c["recursos"].get("efectos_max", 0):
@@ -320,6 +322,8 @@ def _aprobar(a, raiz, codigo, pol, tty):
         if err:
             print(err, file=sys.stderr)
             return 1
+    if pol.get("firma_aprobacion"):
+        c["autoridad"]["aprobacion"]["firma"] = firma.firmar(c, firma.clave(raiz, crear=True))
     contrato.guardar(_ruta(raiz, a.id), c)
     borrador = raiz / "contratos/borradores" / f"{a.id}.json"
     if borrador.exists():
