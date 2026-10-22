@@ -24,6 +24,7 @@ description: Redactar, enseñar, enmendar y pedir la aprobación de un contrato 
    - `autoridad.ordenes`: órdenes exactas (`cargo test`, `git merge --no-ff agent/*`). Nunca un intérprete suelto.
    - `autoridad.caduca`: lo que dure el encargo más un margen, con zona horaria.
    - `recursos.efectos_max`: estimación honesta (unos 3 efectos por fichero tocado, más las órdenes).
+   - `recursos.minutos_max` (opcional): duración máxima desde la activación; pasado ese tiempo la puerta para los efectos materiales.
    - `condiciones.post`: órdenes con lo que deben devolver, más un informe en `~/.yema/memoria/<id>.md`.
    - `peticion`: las palabras exactas de la persona. `requisitos`: lo que pidió, en sus frases literales (`S1`, `S2`…), cada uno enlazado a la postcondición que lo demuestra.
    - `ambito.pruebas`: globs de los tests del repo, para que los que ya existen no se toquen.

@@ -14,7 +14,7 @@ import shlex
 import shutil
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -34,6 +34,47 @@ def cupula_de(entrada):
 
 
 CUPULA_ESCRITURA = {"vault_write", "vault_rag_sync", "vault_index"}
+# Lo que Yema lee sale a un modelo en la nube: nada por encima de N2.
+NIVELES_ALTOS = ("N3", "N4")
+NIVEL_EN_NOTA = re.compile(r"^(?:confidentiality|confidencialidad|nivel)\s*:\s*(N[1-4]b?)\b", re.I | re.M)
+
+
+def _registro_cupulas(pol):
+    ruta = pol.get("registro_cupulas")
+    if not ruta:
+        return {}
+    try:
+        return json.loads(Path(os.path.expanduser(ruta)).read_text(encoding="utf-8")).get("domes", {})
+    except (OSError, ValueError):
+        return {}
+
+
+def nivel_alto_en_lectura(pol, cupula, ruta=None):
+    """Alarma, no defensa principal: motivo si la cúpula o la nota son N3+; None si no.
+
+    Si salta, busca por qué esa nota está en una cúpula legible; no amplíes la lista.
+    """
+    registro = _registro_cupulas(pol)
+    d = registro.get(cupula)
+    if not d:
+        return None
+    nivel = str(d.get("confidentiality", ""))
+    if nivel.upper().startswith(NIVELES_ALTOS):
+        return f"la cúpula {cupula} es {nivel}: nunca sale a la nube"
+    if not ruta:
+        return None
+    base = Path(os.path.realpath(os.path.expanduser(d.get("path", ""))))
+    nota = Path(os.path.realpath(base / ruta))
+    if base not in nota.parents:
+        return f"la ruta {ruta!r} sale de la cúpula {cupula}"
+    try:
+        cabeza = nota.read_text(encoding="utf-8", errors="replace")[:2000]
+    except OSError:
+        return None
+    m = NIVEL_EN_NOTA.search(cabeza)
+    if m and m.group(1).upper().startswith(NIVELES_ALTOS):
+        return f"la nota {ruta} es {m.group(1)} dentro de {cupula}: nunca sale a la nube"
+    return None
 METACARACTERES = set(";|&`$<>()\n\\")
 PROTEGIDAS = ("nucleo", "gobierno", "contratos", "evidencia", ".claude")
 IDENTIDAD = ("AGENTS.md", "CLAUDE.md", "ALMA.md")
@@ -242,9 +283,44 @@ def orden_de_gobierno(cmd, raiz, cwd):
     return None
 
 
-def lector_inerte(cmd, cwd, pol):
+def _peligroso(cmd):
+    """True si el shell interpretaría algo además de palabras literales.
+
+    Entre comillas simples todo es literal. Entre dobles, solo `$` y la comilla invertida
+    expanden. Fuera de comillas, cualquier metacarácter cuenta. Una barra invertida fuera de
+    comillas simples hace literal el carácter siguiente, salvo un salto de línea, que nunca vale.
+    Comillas sin cerrar: peligroso.
+    """
+    estado, i = "normal", 0
+    while i < len(cmd):
+        ch = cmd[i]
+        if ch == "\n":
+            return True
+        if estado == "simple":
+            if ch == "'":
+                estado = "normal"
+        elif ch == "\\":
+            if i + 1 < len(cmd) and cmd[i + 1] == "\n":
+                return True
+            i += 1
+        elif estado == "doble":
+            if ch == '"':
+                estado = "normal"
+            elif ch in "$`":
+                return True
+        elif ch == "'":
+            estado = "simple"
+        elif ch == '"':
+            estado = "doble"
+        elif ch in METACARACTERES:
+            return True
+        i += 1
+    return estado != "normal"
+
+
+def lector_inerte(cmd, cwd, pol, recursivo=False):
     """True si la orden solo lee o lista y no toca nada vetado por la política."""
-    if any(ch in METACARACTERES for ch in cmd):
+    if _peligroso(cmd):
         return False
     try:
         toks = shlex.split(cmd)
@@ -255,13 +331,44 @@ def lector_inerte(cmd, cwd, pol):
     args = toks[1:]
     if toks[0] == "find" and any(a in FIND_PELIGROSO for a in args):
         return False
-    if toks[0] == "grep" and any(a in GREP_RECURSIVO or (a.startswith("-") and not a.startswith("--") and "r" in a.lower())
-                                 for a in args):
+    if not recursivo and toks[0] == "grep" and any(es_grep_recursivo(a) for a in args):
         return False
     return not any(_vetada(_real(a, cwd), pol) for a in args if not a.startswith("-"))
 
 
 SEPARADORES_LECTURA = set(";`$<>()\n\\")
+
+
+def _sin_comillas_simples(cmd):
+    """El texto con los tramos entre comillas simples vaciados (dentro todo es literal)."""
+    return re.sub(r"'[^']*'", "''", cmd)
+
+
+def es_grep_recursivo(a):
+    return a in GREP_RECURSIVO or (a.startswith("-") and not a.startswith("--") and "r" in a.lower())
+
+
+def grep_recursivo_en_ambito(cmd, cwd, pol, base, estado):
+    """grep -r como lectura si todo lo que recorre está dentro del ámbito y no abarca nada vetado."""
+    if not lector_inerte(cmd, cwd, pol, recursivo=True):
+        return False
+    toks = shlex.split(cmd)
+    if toks[0] != "grep" or not any(es_grep_recursivo(a) for a in toks[1:]):
+        return False
+    rutas = [Path(os.path.realpath(os.path.join(cwd, a))) for a in toks[1:]
+             if not a.startswith("-") and os.path.exists(os.path.join(cwd, a))] or [Path(os.path.realpath(cwd))]
+    zonas = [Path(os.path.realpath(estado))]
+    for g in pol.get("lectura_vetada", []):
+        g = os.path.expanduser(g)
+        if "/" in g:
+            fijo = re.split(r"[*?\\[]", g, maxsplit=1)[0]
+            zonas.append(Path(os.path.realpath(fijo if fijo.endswith("/") else os.path.dirname(fijo) or "/")))
+    for r in rutas:
+        if not _dentro(r, base):
+            return False
+        if r.is_dir() and any(z == r or r in z.parents for z in zonas):
+            return False
+    return True
 
 
 REDIRECCION_INOCUA = re.compile(r"\s2>(&1|/dev/null)(?=\s|\||$)")
@@ -357,7 +464,7 @@ def lectura_encadenada(cmd, cwd, pol, raiz=None):
     """True si `cmd` es una cadena de lectores inertes unidos por && o |, con cd entre medias.
 
     Cada cd cambia el directorio con el que se resuelven (y se vetan) las rutas siguientes."""
-    if any(ch in SEPARADORES_LECTURA for ch in cmd) or "||" in cmd:
+    if any(ch in SEPARADORES_LECTURA for ch in _sin_comillas_simples(cmd)) or "||" in cmd:
         return False
     if "&" in cmd.replace("&&", ""):
         return False
@@ -437,6 +544,7 @@ def _ruta_de(entrada):
 
 
 QUE_HACER = (
+    ("orden fuera del ámbito", "lánzala desde la carpeta del contrato: «cd <raíz del contrato> && <orden>» (un cd y una orden simple)."),
     ("datos privados", "reformula la consulta en términos genéricos, sin nombres, correos, IP ni datos del proyecto."),
     ("ejecutar pruebas sin contrato", "usa «yema prueba <carpeta> -- <orden>» (copia aislada, sin red ni hogar; admite --parche)."),
     ("contrato no vigente", "propón un contrato (skill contrato) o pide a la persona que reanude el que hay."),
@@ -472,6 +580,71 @@ def con_que_hacer(motivo):
     return f"{motivo}. Qué hacer: detente y cuéntaselo a la persona."
 
 
+CD_Y_ORDEN = re.compile(r"\s*cd\s+([^\s;&|`$()<>\\]+)\s*&&\s*(.+)", re.S)
+
+
+def _separar_cd(entrada, cwd):
+    """«cd <carpeta> && <orden simple>» se juzga como la orden ejecutada en esa carpeta.
+
+    Una sesión abierta fuera del ámbito (por ejemplo, en el repo de Yema) no podría
+    lanzar nada en el proyecto del contrato sin esta forma. Solo un cd y una orden simple;
+    cualquier otra composición sigue rechazándose entera.
+    """
+    m = CD_Y_ORDEN.fullmatch(entrada.get("command", ""))
+    if not m or any(ch in METACARACTERES for ch in m.group(2)):
+        return cwd, entrada
+    nuevo = os.path.realpath(os.path.join(cwd, os.path.expanduser(m.group(1))))
+    return nuevo, {**entrada, "command": m.group(2).strip()}
+
+
+HEREDOC_CITADO = re.compile(r"(?P<orden>[^\n<]+?)\s*<<-?\s*(?P<q>['\"])(?P<tag>\w+)(?P=q)\n.*\n(?P=tag)\s*", re.S)
+FILTROS = {"head", "tail", "grep", "wc"}
+
+
+def _partir_tubos(cmd):
+    """Partes separadas por «|» fuera de comillas; None si hay «||» o comillas sin cerrar."""
+    partes, actual, estado, i = [], "", "normal", 0
+    while i < len(cmd):
+        ch = cmd[i]
+        if estado == "normal" and ch == "|":
+            if cmd[i:i + 2] == "||" or (i and cmd[i - 1] == "|"):
+                return None
+            partes.append(actual)
+            actual, i = "", i + 1
+            continue
+        if estado == "normal" and ch in "'\"":
+            estado = "simple" if ch == "'" else "doble"
+        elif estado == "simple" and ch == "'" or estado == "doble" and ch == '"':
+            estado = "normal"
+        actual += ch
+        i += 1
+    return None if estado != "normal" else partes + [actual]
+
+
+def _quitar_filtros_y_heredoc(entrada, cwd, pol):
+    """«orden | head…» y «intérprete <<'FIN' … FIN» se juzgan por la orden de cabeza.
+
+    Los filtros (head, tail, grep, wc) son lectores inertes: no ejecutan ni escriben. Un heredoc
+    citado no expande nada y solo alimenta la entrada estándar de la orden, que el contrato ya
+    concede. Lo demás (tubos hacia otra cosa, heredoc sin citar, algo detrás) no se toca.
+    """
+    cmd = entrada.get("command", "")
+    m = HEREDOC_CITADO.fullmatch(cmd)
+    if m:
+        lineas = cmd.rstrip().split("\n")[1:-1]
+        if any(l.strip("\t") == m.group("tag") for l in lineas):
+            return entrada  # bash cerraría antes y ejecutaría lo de detrás
+        return {**entrada, "command": m.group("orden").strip()}
+    partes = _partir_tubos(cmd)
+    if not partes or len(partes) < 2:
+        return entrada
+    for filtro in partes[1:]:
+        f = filtro.strip()
+        if not f or f.split()[0] not in FILTROS or not lector_inerte(f, cwd, pol):
+            return entrada
+    return {**entrada, "command": sin_redireccion_inocua(partes[0].strip()).strip()}
+
+
 def decidir(ev, raiz, ahora=None):
     """(permitido, motivo, efecto); cada rechazo dice qué hacer."""
     ok, motivo, efecto = _decidir(ev, raiz, ahora)
@@ -487,6 +660,9 @@ def _decidir(ev, raiz, ahora=None):
     estado = estado_de(raiz, pol)
     herr, entrada = ev.get("tool_name", ""), ev.get("tool_input") or {}
     cwd = ev.get("cwd") or os.getcwd()
+    if herr == "Bash":
+        cwd, entrada = _separar_cd(entrada, cwd)
+        entrada = _quitar_filtros_y_heredoc(entrada, cwd, _politica(raiz))
     efecto = efecto_de(herr, entrada)
     if efecto is None:
         return False, f"herramienta desconocida: {herr}", None
@@ -516,6 +692,9 @@ def _decidir(ev, raiz, ahora=None):
         permitidas = set(pol.get("cupulas_lectura", [])) | set((c or {}).get("contexto", {}).get("cupulas", []))
         if cupula_de(entrada) not in permitidas:
             return False, f"cúpula no permitida o sin indicar: {cupula_de(entrada)!r}", efecto
+        alto = nivel_alto_en_lectura(pol, cupula_de(entrada), entrada.get("path"))
+        if alto:
+            return False, alto, efecto
         return True, "", LECTURA_CONOCIDA
     if efecto == "leer":
         if real and _vetada(real, pol):
@@ -544,6 +723,8 @@ def _decidir(ev, raiz, ahora=None):
 
     a, amb = c["autoridad"], c["ambito"]
     base = Path(os.path.realpath(amb["raiz"]))
+    if efecto == "bash" and grep_recursivo_en_ambito(sin_redireccion_inocua(entrada.get("command", "")), cwd, pol, base, estado):
+        return True, "", "leer"
     if efecto == "bash":
         efecto, norm, rutas = clasificar_orden(entrada.get("command", ""))
         if efecto is None:
@@ -552,7 +733,7 @@ def _decidir(ev, raiz, ahora=None):
             return False, "Yema no ejecuta su propio núcleo ni toca su gobierno desde una orden", efecto
         for r in rutas + [cwd]:
             if not _dentro(_real(r, cwd), base):
-                return False, f"orden fuera del ámbito del contrato: {r}", efecto
+                return False, f"orden fuera del ámbito del contrato: {r}", efecto  # pista en QUE_HACER
         if not any(_orden_casa(norm, o.split()) for o in a.get("ordenes", [])):
             return False, f"orden no listada en el contrato: {' '.join(norm[:3])}", efecto
     if efecto == "red" and herr in RED:
@@ -581,6 +762,16 @@ def efectos_usados(registro):
                if x.get("permitido") is True and x.get("efecto") not in ("leer", "interno", "gobierno", LECTURA_CONOCIDA))
 
 
+def tiempo_agotado(c, ahora):
+    """True si pasó recursos.minutos_max desde la última activación."""
+    minutos = c.get("recursos", {}).get("minutos_max")
+    activaciones = [h["fecha"] for h in c.get("historial", []) if h.get("a") == "activo"]
+    if not minutos or not activaciones:
+        return False
+    desde = datetime.fromisoformat(activaciones[-1])
+    return ahora > desde + timedelta(minutes=minutos)
+
+
 def evaluar_y_registrar(ev, raiz, ahora=None):
     """decidir + presupuesto de efectos + recibo en el registro de evidencia."""
     ahora = ahora or datetime.now(timezone.utc)
@@ -599,6 +790,8 @@ def evaluar_y_registrar(ev, raiz, ahora=None):
         usados = efectos_usados(registro)
         if usados >= c["recursos"].get("efectos_max", 0):
             ok, motivo = False, con_que_hacer(f"presupuesto de efectos agotado ({usados})")
+        elif tiempo_agotado(c, ahora):
+            ok, motivo = False, con_que_hacer(f"presupuesto de tiempo agotado ({c['recursos']['minutos_max']} min)")
     if material or not ok:
         evidencia.anotar(registro, {"contrato": cid, "version": c["version"] if c else None,
                                     "herramienta": ev.get("tool_name"), "efecto": efecto,

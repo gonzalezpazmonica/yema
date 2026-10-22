@@ -35,5 +35,6 @@
   },
   "savia": "~/savia",
   "terminos_privados": "~/.yema/terminos-privados.txt",
-  "firma_aprobacion": true
+  "firma_aprobacion": true,
+  "registro_cupulas": "~/savia/projects/savia-vaults/savia-vaults.domes.json"
 }
