@@ -15,6 +15,16 @@ Yema nace: una compañera de trabajo con IA que hace trabajo largo dentro de con
 - **Gobierno por conversación**: `yema aprobar` pide la decisión al diálogo nativo del arnés (que el modelo no puede pulsar), con ticket de un solo uso; se deniega solo en `bypassPermissions` y `dontAsk`.
 - **Aprobación firmada (F4)**: la aprobación se firma con HMAC y un secreto local que la agente no puede leer ni escribir; la puerta solo da por vigente un contrato con firma válida.
 - **Presupuesto de tiempo**: `recursos.minutos_max`; pasado ese tiempo, se deniegan los efectos materiales.
+- **La aprobación fija la política**: si `politica.json` cambia después de aprobar, el contrato deja de valer hasta volver a aprobarlo.
+- **Borrar es un efecto aparte**: `rm`, `git rm`, `git clean` y similares exigen `borrar`; conceder escribir ya no basta.
+- **Órdenes desde otra carpeta**: `cd <raíz del contrato> && <orden>` funciona desde una sesión abierta en el repo de Yema; el arranque lo indica.
+- **Menos fricción sin abrir huecos**:
+  - lecturas con comillas;
+  - `grep -r` dentro del ámbito;
+  - orden concedida con filtros de lectura (`| head`, `| grep`…);
+  - heredoc citado para un intérprete concedido.
+- **Estado visible coherente con la puerta**: nunca dice «Trabajando» con un contrato que la puerta rechaza.
+- **`bin/yema-sesion`**: abre Claude Code solo con los MCP de Yema y con las herramientas bajo demanda (−17 % de tokens al arrancar).
 - **El contrato es el permiso**: lo concedido no se vuelve a preguntar paso a paso; las lecturas validadas en carpetas conocidas tampoco.
 - **Ejecución aislada** (`yema prueba`): copia desechable en un sandbox bwrap de root, sin red ni hogar, con tiempo y tamaño limitados y parche opcional.
 - **Cuidado**: `yema cuidado` (permisos, copias, disco, descanso) y `yema copia`.
@@ -28,10 +38,12 @@ Yema nace: una compañera de trabajo con IA que hace trabajo largo dentro de con
 - **Relevo de Savia**: `yema savia <palabras>` encuentra cualquier capacidad de Savia en su mapa, para usarla como herramienta dentro de un contrato.
 
 ### Seguridad
+- Los motivos de la puerta y la evidencia sustituyen los secretos por `***`.
+- Un heredoc con la marca de cierre escondida en el cuerpo se rechaza.
 - Un comodín en un lector (`cat ~/.s*/id_*`) se juzga por lo que abriría, y Grep no puede abarcar una carpeta con algo vetado.
 
 ### Ideas adoptadas de ODD (Gentleman Programming), con control en código
 Prueba de reanudación, cuatro estados visibles, checkpoint con forma fija, tests preexistentes intocables, rechazos que dicen qué hacer y garantías probadas a través del hook real.
 
 ### Calidad
-Más de 170 pruebas, incluidas garantías negativas, mutaciones comprobadas y aislamiento real en CI. Evaluación a ciegas frente a Savia en `docs/evaluacion.md`, incluida una ronda que no valió (E8) y por qué.
+222 pruebas, incluidas garantías negativas, mutaciones comprobadas y aislamiento real en CI. Evaluación a ciegas frente a Savia en `docs/evaluacion.md`, incluida una ronda que no valió (E8) y la línea base sobre 20 tareas reales (E9). `evals/` incluye el juicio ciego y las huellas de método.
