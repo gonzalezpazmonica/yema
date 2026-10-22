@@ -30,6 +30,26 @@ class TestArranqueSesion(unittest.TestCase):
             self.assertIn("python3", ctx)  # herramientas disponibles: no gasta turnos en tantear
             self.assertLess(len(ctx.split()), 80)  # barato: no es un segundo AGENTS.md
 
+    def test_contrato_en_otra_carpeta_dice_como_lanzar_ordenes(self):
+        sys.path.insert(0, str(RAIZ / "pruebas"))
+        from apoyo_test import aprobado
+        with tempfile.TemporaryDirectory() as t:
+            estado, trabajo = Path(t) / "estado", Path(t) / "proyecto"
+            (estado / "contratos/borradores").mkdir(parents=True)
+            trabajo.mkdir()
+            c = aprobado(trabajo)
+            c["autoridad"]["caduca"] = "2999-01-01T00:00:00+00:00"
+            from nucleo import contrato
+            c["autoridad"]["aprobacion"]["huella"] = contrato.huella(c)
+            (estado / "contratos/C-0001.json").write_text(json.dumps(c))
+            (estado / "contratos/ACTIVO").write_text("C-0001")
+            env = {**os.environ, "YEMA_ESTADO": str(estado)}
+            r = subprocess.run([sys.executable, str(RAIZ / "nucleo/arranque.py")],
+                               input=json.dumps({"cwd": t}), capture_output=True, text=True, env=env)
+            ctx = json.loads(r.stdout)["hookSpecificOutput"]["additionalContext"]
+            self.assertIn(f"cd {trabajo} &&", ctx)
+            self.assertLess(len(ctx.split()), 80)
+
     def test_falla_en_silencio_sin_romper_la_sesion(self):
         env = {**os.environ, "YEMA_ESTADO": "/ruta/que/no/existe"}
         r = subprocess.run([sys.executable, str(RAIZ / "nucleo/arranque.py")], input="{}",

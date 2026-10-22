@@ -139,7 +139,8 @@ class TestPuerta(Entorno):
         self.assertTrue(self.decide("Bash", {"command": "python3 src/a.py"})[0])
 
     def test_compuesta_sin_contrato_dice_partir(self):
-        ok, motivo, _ = self.decide("Bash", {"command": "cd src && touch x"})
+        # «cd X && orden» es una forma admitida; esta sigue siendo compuesta de verdad.
+        ok, motivo, _ = self.decide("Bash", {"command": "cd src && touch x && ls"})
         self.assertFalse(ok)
         self.assertIn("pártela", motivo)
 

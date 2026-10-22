@@ -381,6 +381,7 @@ def _ruta_de(entrada):
 
 
 QUE_HACER = (
+    ("orden fuera del ámbito", "lánzala desde la carpeta del contrato: «cd <raíz del contrato> && <orden>» (un cd y una orden simple)."),
     ("datos privados", "reformula la consulta en términos genéricos, sin nombres, correos, IP ni datos del proyecto."),
     ("ejecutar pruebas sin contrato", "usa «yema prueba <carpeta> -- <orden>» (copia aislada, sin red ni hogar; admite --parche)."),
     ("contrato no vigente", "propón un contrato (skill contrato) o pide a la persona que reanude el que hay."),
@@ -416,6 +417,23 @@ def con_que_hacer(motivo):
     return f"{motivo}. Qué hacer: detente y cuéntaselo a la persona."
 
 
+CD_Y_ORDEN = re.compile(r"\s*cd\s+([^\s;&|`$()<>\\]+)\s*&&\s*(.+)", re.S)
+
+
+def _separar_cd(entrada, cwd):
+    """«cd <carpeta> && <orden simple>» se juzga como la orden ejecutada en esa carpeta.
+
+    Una sesión abierta fuera del ámbito (por ejemplo, en el repo de Yema) no podría
+    lanzar nada en el proyecto del contrato sin esta forma. Solo un cd y una orden simple;
+    cualquier otra composición sigue rechazándose entera.
+    """
+    m = CD_Y_ORDEN.fullmatch(entrada.get("command", ""))
+    if not m or any(ch in METACARACTERES for ch in m.group(2)):
+        return cwd, entrada
+    nuevo = os.path.realpath(os.path.join(cwd, os.path.expanduser(m.group(1))))
+    return nuevo, {**entrada, "command": m.group(2).strip()}
+
+
 def decidir(ev, raiz, ahora=None):
     """(permitido, motivo, efecto); cada rechazo dice qué hacer."""
     ok, motivo, efecto = _decidir(ev, raiz, ahora)
@@ -431,6 +449,8 @@ def _decidir(ev, raiz, ahora=None):
     estado = estado_de(raiz, pol)
     herr, entrada = ev.get("tool_name", ""), ev.get("tool_input") or {}
     cwd = ev.get("cwd") or os.getcwd()
+    if herr == "Bash":
+        cwd, entrada = _separar_cd(entrada, cwd)
     efecto = efecto_de(herr, entrada)
     if efecto is None:
         return False, f"herramienta desconocida: {herr}", None
@@ -492,7 +512,7 @@ def _decidir(ev, raiz, ahora=None):
             return False, "Yema no ejecuta su propio núcleo ni toca su gobierno desde una orden", efecto
         for r in rutas + [cwd]:
             if not _dentro(_real(r, cwd), base):
-                return False, f"orden fuera del ámbito del contrato: {r}", efecto
+                return False, f"orden fuera del ámbito del contrato: {r}", efecto  # pista en QUE_HACER
         if not any(_orden_casa(norm, o.split()) for o in a.get("ordenes", [])):
             return False, f"orden no listada en el contrato: {' '.join(norm[:3])}", efecto
     if efecto == "red" and herr in RED:
