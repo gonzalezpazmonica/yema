@@ -510,14 +510,20 @@ def ruta_de_borrador(estado, cid):
     return None
 
 
-def _contrato_de_gobierno(estado, cid):
+def _contrato_de_gobierno(estado, cid, huella8=None):
+    """El contrato con ese id. Con huella, la versión que casa: la activa o una enmienda en borradores."""
     if not cid or "/" in cid:
         return None
+    candidatos = []
     ruta = Path(estado) / "contratos" / f"{cid}.json"
     if ruta.exists():
-        return contrato.cargar(ruta)
-    ruta = ruta_de_borrador(estado, cid)
-    return contrato.cargar(ruta) if ruta else None
+        candidatos.append(contrato.cargar(ruta))
+    borrador = ruta_de_borrador(estado, cid)
+    if borrador:
+        candidatos.append(contrato.cargar(borrador))
+    if huella8:
+        return next((c for c in candidatos if contrato.huella(c)[:8] == huella8), None)
+    return candidatos[0] if candidatos else None
 
 
 def decidir_gobierno(args, ev, estado):
@@ -530,7 +536,7 @@ def decidir_gobierno(args, ev, estado):
         if ev.get("permission_mode") in MODOS_SIN_PREGUNTA:
             return False, (f"aprobar exige que la persona conteste un diálogo; el modo "
                            f"{ev.get('permission_mode')} no pregunta. Cambia a modo normal."), "gobierno"
-        c = _contrato_de_gobierno(estado, args[1])
+        c = _contrato_de_gobierno(estado, args[1], args[2]) or _contrato_de_gobierno(estado, args[1])
         if c is None:
             return False, f"no encuentro el contrato {args[1]}", "gobierno"
         if contrato.huella(c)[:8] != args[2]:

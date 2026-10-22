@@ -304,7 +304,7 @@ def _persona_presente(raiz, cid, h8, tty):
 
 
 def _aprobar(a, raiz, codigo, pol, tty):
-    c = puerta._contrato_de_gobierno(raiz, a.id)
+    c = puerta._contrato_de_gobierno(raiz, a.id, a.huella) or puerta._contrato_de_gobierno(raiz, a.id)
     if c is None:
         print(f"no encuentro {a.id}", file=sys.stderr)
         return 1
