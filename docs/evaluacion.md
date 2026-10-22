@@ -62,3 +62,21 @@ Ronda 2: reloj medio de 22,6 s para Savia y 28,5 s para Yema. Coste medio de 0,2
 
 **Lección:** una evaluación comparativa tiene que dar a las dos agentes las herramientas que tienen en uso real. Si no, mide la configuración y no a la agente.
 
+## E9 · Línea base F1: 20 tareas reales con tests ocultos
+
+Veinte arreglos ya integrados en Savia (hooks y scripts bash y python). Para cada uno se comprobó que su test falla antes del arreglo y pasa después. Cada agente recibe una copia del repo en el commit anterior y la descripción del fallo; los tests del arreglo se aplican al final, sin que los vean. Mismo modelo y modo auto para las dos. Yema trabaja con un contrato aprobado para la tarea.
+
+| Ronda | Tests ocultos que pasan | Reloj medio | Coste (19 tareas) | Denegaciones |
+|---|---|---|---|---|
+| Savia, repetición 1 | 58,6 % | **96 s** | 9,09 $ | **34** |
+| Savia, repetición 2 | 59,3 % | 103 s | 8,09 $ | 40 |
+| Yema, versión inicial | 63,9 % | 147 s | 11,05 $ | 147 |
+| Yema, con los arreglos de fricción | **61,7–63,0 %** | 102–115 s | **7,77–8,07 $** | 75–89 |
+
+**Lectura:**
+- Yema saca unos 3–4 puntos más en todas sus rondas; Savia varía 0,7 puntos entre repeticiones. Es una ventaja pequeña y estable, sin significación formal con tan pocas repeticiones.
+- Con los arreglos, Yema es un 5–10 % más barata y un 5–15 % más lenta.
+- La primera ronda fue mucho más lenta por la fricción de la puerta: sesiones fuera de la carpeta del contrato, comillas, `grep -r`, filtros y heredocs. Los arreglos salieron de esta medición.
+- Ninguna de las dos tocó tests existentes.
+- Los porcentajes absolutos son bajos porque las descripciones de los fallos dicen menos de lo que los tests comprueban. Lo que cuenta es la diferencia.
+

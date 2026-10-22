@@ -227,7 +227,9 @@ Detalle en [`docs/arquitectura.md`](docs/arquitectura.md).
 
 ## Resultados frente a Savia
 
-En una evaluación a ciegas con tres tareas y el mismo modelo, Yema sacó 24 de 24 frente a 20,8 de Savia, con menos coste. En la tarea de código entregó 5 de 5 parches que pasan los tests, frente a 0 de 5, aunque tardó unos segundos más porque verifica. En la lectura de una cúpula de conocimiento (E8), la primera ronda dio 7,0 a Yema frente a 1,5 a Savia. Esa ronda no vale: Savia no tenía permiso para sus herramientas de cúpula. Repetida en igualdad de herramientas, Yema saca 6,83 y Savia 6,17, una ventaja modesta. Savia fue un 21 % más rápida. Detalle y límites en [`docs/evaluacion.md`](docs/evaluacion.md).
+En una evaluación a ciegas con tres tareas y el mismo modelo, Yema sacó 24 de 24 frente a 20,8 de Savia, con menos coste. En la tarea de código entregó 5 de 5 parches que pasan los tests, frente a 0 de 5, aunque tardó unos segundos más porque verifica. En la lectura de una cúpula de conocimiento (E8), la primera ronda dio 7,0 a Yema frente a 1,5 a Savia. Esa ronda no vale: Savia no tenía permiso para sus herramientas de cúpula. Repetida en igualdad de herramientas, Yema saca 6,83 y Savia 6,17, una ventaja modesta. Savia fue un 21 % más rápida.
+
+Sobre 20 tareas reales de Savia con tests ocultos (E9), Yema pasa entre el 61,7 % y el 63,0 % de los tests, frente al 58,6–59,3 % de Savia, y cuesta un 5–10 % menos. A cambio, tarda un 5–15 % más. Detalle y límites en [`docs/evaluacion.md`](docs/evaluacion.md).
 
 ## Estado
 
