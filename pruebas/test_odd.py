@@ -54,7 +54,9 @@ class TestCuatroEstados(ConEstado):
         self.assertEqual(yema.situacion(self.yema)[0], "Lista")
 
     def test_borrador_pendiente_necesita_decision(self):
-        (self.estado / "contratos/borradores/C-0002.json").write_text(json.dumps(base(self.trabajo)))
+        c = base(self.trabajo)
+        c["id"] = "C-0002"  # la identidad es el id de dentro, no el nombre del fichero
+        (self.estado / "contratos/borradores/C-0002.json").write_text(json.dumps(c))
         estado, detalle = yema.situacion(self.yema)
         self.assertEqual(estado, "Necesita tu decisión")
         self.assertIn("C-0002", detalle)

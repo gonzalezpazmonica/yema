@@ -495,13 +495,29 @@ def lectura_encadenada(cmd, cwd, pol, raiz=None):
     return True
 
 
+def ruta_de_borrador(estado, cid):
+    """Fichero del borrador con ese id: por nombre o, si no, por el id que lleva dentro."""
+    carpeta = Path(estado) / "contratos/borradores"
+    directo = carpeta / f"{cid}.json"
+    if directo.exists():
+        return directo
+    for f in sorted(carpeta.glob("*.json")):
+        try:
+            if json.loads(f.read_text(encoding="utf-8")).get("id") == cid:
+                return f
+        except (OSError, ValueError):
+            continue
+    return None
+
+
 def _contrato_de_gobierno(estado, cid):
     if not cid or "/" in cid:
         return None
-    for ruta in (estado / "contratos" / f"{cid}.json", estado / "contratos/borradores" / f"{cid}.json"):
-        if ruta.exists():
-            return contrato.cargar(ruta)
-    return None
+    ruta = Path(estado) / "contratos" / f"{cid}.json"
+    if ruta.exists():
+        return contrato.cargar(ruta)
+    ruta = ruta_de_borrador(estado, cid)
+    return contrato.cargar(ruta) if ruta else None
 
 
 def decidir_gobierno(args, ev, estado):
