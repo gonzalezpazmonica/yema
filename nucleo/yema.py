@@ -174,6 +174,7 @@ def main(argv=None, raiz=None, tty=None):
         print(err, file=sys.stderr)
         return 1
     if nuevo == "aprobado" and pol.get("firma_aprobacion"):
+        c["autoridad"]["aprobacion"]["politica"] = puerta.huella_politica(pol)
         c["autoridad"]["aprobacion"]["firma"] = firma.firmar(c, firma.clave(raiz, crear=True))
     contrato.guardar(ruta, c)
     punt = raiz / "contratos/ACTIVO"
@@ -323,6 +324,7 @@ def _aprobar(a, raiz, codigo, pol, tty):
             print(err, file=sys.stderr)
             return 1
     if pol.get("firma_aprobacion"):
+        c["autoridad"]["aprobacion"]["politica"] = puerta.huella_politica(pol)
         c["autoridad"]["aprobacion"]["firma"] = firma.firmar(c, firma.clave(raiz, crear=True))
     contrato.guardar(_ruta(raiz, a.id), c)
     borrador = raiz / "contratos/borradores" / f"{a.id}.json"

@@ -5,6 +5,7 @@ exit 2 bloquea con el motivo en stderr. Cualquier error bloquea.
 Sin contrato vigente solo se permiten los efectos de `efectos_sin_contrato`.
 """
 import fnmatch
+import hashlib
 import glob
 import json
 import re
@@ -87,6 +88,8 @@ def activo(raiz, pol, ahora):
     ok, motivo = contrato.vigente(c, pol, ahora)
     if ok and pol.get("firma_aprobacion") and not firma.verificar(c, firma.clave(raiz)):
         ok, motivo = False, "contrato no vigente: la aprobación no tiene una firma válida"
+    elif ok and pol.get("firma_aprobacion") and c["autoridad"]["aprobacion"].get("politica") != huella_politica(pol):
+        ok, motivo = False, "contrato no vigente: la política cambió desde la aprobación; hay que volver a aprobarlo"
     return (c, "") if ok else (None, motivo)
 
 
@@ -144,6 +147,31 @@ def _vetada_dentro(carpeta, pol, estado):
     return None
 
 
+SECRETOS = (
+    re.compile(r"\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}"),
+    re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}"),
+    re.compile(r"\bsk-[A-Za-z0-9_-]{20,}"),
+    re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
+    re.compile(r"(?<=://)[^/\s@]+@"),
+)
+CLAVE_VALOR = re.compile(r"(?i)(\b(?:password|passwd|pwd|token|secret|api[_-]?key|apikey)\s*[=:]\s*|"
+                         r"--?(?:password|token|secret|api-key)(?:\s+|=))(\S+)")
+
+
+def redactar(texto):
+    """El texto sin nada que parezca un secreto: ni los motivos ni la evidencia lo repiten."""
+    texto = CLAVE_VALOR.sub(lambda m: m.group(1) + "***", str(texto))
+    for patron in SECRETOS:
+        texto = patron.sub("***", texto)
+    return texto
+
+
+def huella_politica(pol):
+    """Huella de la política: la aprobación la fija para que un cambio de reglas no pase inadvertido."""
+    canon = json.dumps(pol, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(canon.encode()).hexdigest()
+
+
 def clasificar_orden(cmd):
     """(efecto, tokens normalizados, rutas -C) o (None, motivo, [])."""
     if any(ch in METACARACTERES for ch in cmd):
@@ -177,6 +205,8 @@ def clasificar_orden(cmd):
             return "red", norm, rutas
         if sub == "merge":
             return "fusionar", norm, rutas
+        if sub in ("rm", "clean") or (sub == "branch" and any(t in ("-d", "-D", "--delete") for t in resto[1:])):
+            return "borrar", norm, rutas
         return "git-local", norm, rutas
     norm += toks[1:]
     if prog == "gh":
@@ -185,6 +215,8 @@ def clasificar_orden(cmd):
         if toks[1:3] in (["pr", "create"], ["repo", "create"]) or "release" in toks[1:2]:
             return "publicar", norm, rutas
         return "red", norm, rutas
+    if prog in ("rm", "rmdir", "unlink", "shred"):
+        return "borrar", norm, rutas
     if prog in ("curl", "wget", "ssh", "scp", "rsync", "nc", "npm", "pip", "pip3", "cargo"):
         return "red", norm, rutas
     return "ejecutar", norm, rutas
@@ -445,7 +477,7 @@ def decidir(ev, raiz, ahora=None):
     ok, motivo, efecto = _decidir(ev, raiz, ahora)
     if ok is False:
         motivo = con_que_hacer(motivo)
-    return ok, motivo, efecto
+    return ok, redactar(motivo), efecto
 
 
 def _decidir(ev, raiz, ahora=None):

@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 NIVELES = ("E0", "E1", "E2", "E3", "E4")
-EFECTOS = {"leer", "escribir", "ejecutar", "red", "git-local", "git-remoto",
+EFECTOS = {"leer", "escribir", "borrar", "ejecutar", "red", "git-local", "git-remoto",
            "fusionar", "publicar", "delegar", "escribir-cupula"}
 REQUERIDOS = ("id", "version", "estado", "proposito", "responsable", "ejecutora",
               "nivel", "ambito", "autoridad", "recursos", "evidencia")

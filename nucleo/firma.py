@@ -32,7 +32,7 @@ def clave(estado, crear=False):
 def _mensaje(c):
     ap = c.get("autoridad", {}).get("aprobacion", {})
     datos = {"id": c.get("id"), "version": c.get("version"), "huella": ap.get("huella"),
-             "por": ap.get("por"), "fecha": ap.get("fecha")}
+             "por": ap.get("por"), "fecha": ap.get("fecha"), "politica": ap.get("politica")}
     return json.dumps(datos, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()
 
 
