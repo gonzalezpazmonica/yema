@@ -62,6 +62,8 @@ class TestEstadoExterno(Entorno):
         script = self.estado / "casa/verificar.sh"
         script.write_text("true")
         c["autoridad"]["ordenes"].append(f"bash {script}")
+        import hashlib  # un script listado va fijado por su huella
+        c["autoridad"]["scripts"] = {str(script): hashlib.sha256(script.read_bytes()).hexdigest()}
         c["estado"] = "en_revision"
         from nucleo import contrato
         c, _ = contrato.transicion(c, "aprobado", "operadora", "x", politica(), AHORA)

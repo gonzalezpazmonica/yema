@@ -78,7 +78,7 @@ def nivel_alto_en_lectura(pol, cupula, ruta=None):
 METACARACTERES = set(";|&`$<>()\n\\")
 PROTEGIDAS = ("nucleo", "gobierno", "contratos", "evidencia", ".claude")
 IDENTIDAD = ("AGENTS.md", "CLAUDE.md", "ALMA.md")
-GOBIERNO_LIBRE = {"aprende", "estado", "validar", "resumen", "evidencia", "admitir", "suspender", "revocar", "cuidado", "copia",
+GOBIERNO_LIBRE = {"--help", "-h", "ayuda", "aprende", "estado", "validar", "resumen", "evidencia", "admitir", "suspender", "revocar", "cuidado", "copia",
                   "checkpoint", "prueba", "savia"}
 TRANSICIONES_LIBRES = {"borrador", "cuestionado", "candidato", "en_revision", "rechazado", "validando"}
 MODOS_SIN_PREGUNTA = {"bypassPermissions", "dontAsk"}
@@ -261,6 +261,27 @@ def clasificar_orden(cmd):
     if prog in ("curl", "wget", "ssh", "scp", "rsync", "nc", "npm", "pip", "pip3", "cargo"):
         return "red", norm, rutas
     return "ejecutar", norm, rutas
+
+
+def _fijado_real(ruta, base):
+    p = Path(os.path.expanduser(ruta))
+    return Path(os.path.realpath(p if p.is_absolute() else base / p))
+
+
+def script_cambiado(norm, cwd, base, fijados):
+    """Ruta del script si la orden ejecuta uno fijado en el contrato y su contenido ya no casa; si no, None."""
+    ruta = contrato.script_de_orden(norm)
+    if not ruta:
+        return None
+    real = _real(ruta, cwd)
+    for fijado, h in fijados.items():
+        if _fijado_real(fijado, base) == real:
+            try:
+                actual = hashlib.sha256(real.read_bytes()).hexdigest()
+            except OSError:
+                return str(real)
+            return None if actual == h else str(real)
+    return None
 
 
 def orden_de_gobierno(cmd, raiz, cwd):
@@ -763,6 +784,9 @@ def _decidir(ev, raiz, ahora=None):
                 return False, f"orden fuera del ámbito del contrato: {r}", efecto  # pista en QUE_HACER
         if not any(_orden_casa(norm, o.split()) for o in a.get("ordenes", [])):
             return False, f"orden no listada en el contrato: {' '.join(norm[:3])}", efecto
+        cambiado = script_cambiado(norm, cwd, base, a.get("scripts", {}))
+        if cambiado:
+            return False, f"el script {cambiado} cambió desde la aprobación: su huella no casa con la del contrato", efecto
     if efecto == "red" and herr in RED:
         privado = dato_privado_en(" ".join(str(entrada.get(k, "")) for k in ("query", "url", "prompt")), pol)
         if privado:
