@@ -80,3 +80,15 @@ Veinte arreglos ya integrados en Savia (hooks y scripts bash y python). Para cad
 - Ninguna de las dos tocó tests existentes.
 - Los porcentajes absolutos son bajos porque las descripciones de los fallos dicen menos de lo que los tests comprueban. Lo que cuenta es la diferencia.
 
+## E8-E · Investigación web (tarea E)
+
+Pregunta: cómo restringe Ubuntu 24.04 los espacios de nombres de usuario sin privilegios, cómo afecta a bubblewrap y qué hacer en un servicio que lo usa, con fuentes. Dos repeticiones por agente, mismo modelo, modo auto. Yema trabajó con su contrato marco de investigación. La jueza ciega abrió las URL citadas para comprobarlas.
+
+| | Savia | Yema |
+|---|---|---|
+| Puntos (sobre 6) | **6,0** y 6,0 | 5,5 y 5,5 |
+| Reloj | 81 s y 40 s | 54 s y 104 s |
+| Coste | 0,33 $ y 0,21 $ | 0,24 $ y 0,69 $ |
+
+**Lectura:** el contenido de las cuatro respuestas es sólido. Yema perdió medio punto en las dos porque atribuyó a dos fuentes afirmaciones que esas páginas no contienen. **No las había abierto.** Intentó delegar la lectura en un subagente, la puerta se lo denegó (su contrato no concede `delegar`) y no usó WebFetch, que sí tenía concedido. Lo dijo con honestidad, pero citó igual. Arreglo: el rechazo de delegar le indica ahora que lea ella misma, y la skill `investigar` exige abrir cada fuente antes de citarla. **Aquí gana Savia.**
+

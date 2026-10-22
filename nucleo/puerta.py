@@ -559,6 +559,7 @@ QUE_HACER = (
     ("orden ilegible", "revisa las comillas y vuelve a escribirla."),
     ("orden no listada", "usa una orden listada en el contrato o propón una enmienda que la añada."),
     ("efecto prohibido", "no se hace en este contrato; si es imprescindible, plantéalo a la persona como decisión aparte."),
+    ("delegar no está concedido", "no busques otro rodeo: lee y comprueba tú las fuentes antes de citarlas."),
     ("efecto no concedido", "propón una enmienda que conceda ese efecto, explicando por qué hace falta."),
     ("test preexistente", "si el código está mal, arregla el código; si el test está mal, propón una enmienda que lo liste en ambito.pruebas_editables."),
     ("fuera del ámbito", "trabaja dentro del ámbito o propón una enmienda que lo amplíe."),
@@ -746,6 +747,8 @@ def _decidir(ev, raiz, ahora=None):
             return False, f"la consulta a la red lleva datos privados ({privado})", efecto
     if efecto == "escribir-cupula" and cupula_de(entrada) not in c.get("contexto", {}).get("cupulas", []):
         return False, f"cúpula no nombrada en el contrato para escribir: {cupula_de(entrada)!r}", efecto
+    if efecto == "delegar" and "delegar" not in a.get("efectos", []):
+        return False, "delegar no está concedido: hazlo tú misma (WebFetch para leer páginas, Read y Grep para ficheros)", efecto
     if efecto in a.get("prohibidos", []):
         return False, f"efecto prohibido por el contrato: {efecto}", efecto
     if efecto not in a.get("efectos", []):

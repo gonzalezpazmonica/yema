@@ -14,7 +14,7 @@ description: Investigar una pregunta con fuentes (cúpulas, ficheros y web) y en
 ## Buscar
 
 - Consultas genéricas: sin nombres de proyectos, clientes, personas, correos ni IP. La puerta rechaza las que llevan datos privados; reformula, no insistas.
-- De dos a cinco búsquedas bien hechas mejor que veinte vagas. Abre con WebFetch las fuentes que vayas a citar: no cites un resumen de buscador.
+- De dos a cinco búsquedas bien hechas mejor que veinte vagas. **Abre tú misma con WebFetch** cada fuente que vayas a citar (no delegues la lectura salvo que el contrato conceda `delegar`): no cites un resumen de buscador. Una cita sin abrir se marca «sin abrir» y no sostiene una afirmación.
 - Prioriza fuentes primarias (documentación oficial, repositorio, especificación, aviso del fabricante) sobre blogs y foros.
 
 ## Contrastar
