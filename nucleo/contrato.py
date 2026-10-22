@@ -5,6 +5,7 @@ legítima, queda sellado por su huella y caduca.
 """
 import hashlib
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -44,6 +45,17 @@ def huella(c):
     return hashlib.sha256(canon.encode()).hexdigest()
 
 
+INTERPRETES = ("bash", "sh", "python3", "python")
+
+
+def script_de_orden(toks):
+    """La ruta del script si la orden lo ejecuta con un intérprete (`bash x.sh`, `python3 a/b.py`); si no, None."""
+    if len(toks) > 1 and toks[0].rsplit("/", 1)[-1] in INTERPRETES and not toks[1].startswith("-") \
+            and ("/" in toks[1] or toks[1].endswith((".sh", ".py"))):
+        return toks[1]
+    return None
+
+
 def _glob_seguro(g):
     return isinstance(g, str) and g and not g.startswith(("/", "~")) and ".." not in g.split("/")
 
@@ -72,6 +84,15 @@ def errores(c):
             e.append(f"glob inseguro {g!r} en pruebas")
     if c["ejecutora"] == c["responsable"]:
         e.append("la ejecutora no puede ser la responsable")
+    fijados = a.get("scripts", {})
+    for ruta, h in fijados.items():
+        if not re.fullmatch(r"[0-9a-f]{64}", str(h)):
+            e.append(f"autoridad.scripts: huella sha256 inválida para {ruta}")
+    for o in a.get("ordenes", []):
+        ruta = script_de_orden(o.split())
+        if ruta and ruta not in fijados:
+            e.append(f"la orden «{o}» ejecuta un script sin huella: añádelo a autoridad.scripts con su sha256 "
+                     "(la puerta no ve lo que hay dentro)")
     posts = {p.get("id") for p in c.get("condiciones", {}).get("post", [])}
     for p in c.get("condiciones", {}).get("post", []):
         if not str(p.get("orden", "")).strip() and not str(p.get("comprobar", "")).strip():

@@ -59,6 +59,7 @@ def main(argv=None, raiz=None, tty=None):
         x.add_argument("--por", required=True)
         x.add_argument("--motivo", default="")
     s.add_parser("estado")
+    s.add_parser("ayuda")
     s.add_parser("evidencia").add_argument("id")
     s.add_parser("resumen").add_argument("id")
     s.add_parser("cuidado")
@@ -111,11 +112,23 @@ def main(argv=None, raiz=None, tty=None):
         print(f"admitido {c['id']} como candidato")
         return 0
     if a.orden == "resumen":
-        c = puerta._contrato_de_gobierno(raiz, a.id)
-        if c is None:
+        versiones = []
+        activo_ruta = raiz / "contratos" / f"{a.id}.json"
+        if "/" not in a.id and activo_ruta.exists():
+            versiones.append(("en vigor o archivada", contrato.cargar(activo_ruta)))
+        borrador = puerta.ruta_de_borrador(raiz, a.id) if "/" not in a.id else None
+        if borrador:
+            versiones.append(("borrador o enmienda pendiente de aprobar", contrato.cargar(borrador)))
+        if not versiones:
             print(f"no encuentro {a.id}", file=sys.stderr)
             return 1
-        print(contrato.resumen(c))
+        for i, (cual, c) in enumerate(versiones):
+            if len(versiones) > 1:
+                print(("\n" if i else "") + f"— v{c.get('version')} ({cual}) —")
+            print(contrato.resumen(c))
+        return 0
+    if a.orden == "ayuda":
+        p.print_help()
         return 0
     if a.orden == "prueba":
         return _prueba(a, raiz, codigo, pol)

@@ -100,3 +100,9 @@ Los rechazos de la puerta citan la orden. Antes de mostrarlos o guardarlos, se s
 
 Lanzar `yema aprobar` con `!` desde Claude Code no tiene terminal ni pasa por el diálogo, así que la puerta no puede distinguir a una persona de la agente. Se aprueba en el diálogo («aprueba C-0002») o en una terminal propia.
 
+## Scripts fijados por huella
+
+La puerta juzga la orden, no lo que hace un script por dentro. Por eso, cada orden de contrato que ejecute un script con un intérprete (`bash x.sh`, `python3 a/b.py`) exige ese script en `autoridad.scripts` con su sha256. La huella del contrato cubre esas huellas: si el script cambia después de aprobar, la puerta deniega su uso hasta que la persona apruebe una versión nueva. Lo detectó la propia Yema al revisar una enmienda: un script de repetición de tests aceptaba `npm publish`.
+
+`yema resumen <id>` enseña todas las versiones de un contrato (la activa y la enmienda pendiente) con su huella, y `yema ayuda` (o `--help`) es libre.
+

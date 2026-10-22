@@ -104,6 +104,8 @@ class TestPuerta(Entorno):
         script.parent.mkdir(parents=True)
         script.write_text("true")
         c["autoridad"]["ordenes"].append(f"bash {script}")
+        import hashlib  # un script listado va fijado por su huella
+        c["autoridad"]["scripts"] = {str(script): hashlib.sha256(script.read_bytes()).hexdigest()}
         c["estado"] = "en_revision"
         c, _ = contrato.transicion(c, "aprobado", "operadora", "x", politica(), AHORA)
         c, _ = contrato.transicion(c, "aprovisionado", "operadora", "x", politica(), AHORA)

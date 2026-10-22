@@ -77,7 +77,11 @@
       "git merge --no-ff agent/*",
       "bash ~/.yema/casa/verificar.sh"
     ],
-    "caduca": "2030-01-01T00:00:00+00:00"
+    "caduca": "2030-01-01T00:00:00+00:00",
+    "scripts": {
+      "~/.yema/casa/verificar.sh": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "nota_scripts": "Sustituye la huella por la de tu script: sha256sum ~/.yema/casa/verificar.sh. Si el script cambia, la puerta deniega su uso hasta reaprobar."
   },
   "recursos": {
     "efectos_max": 400,
