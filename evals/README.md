@@ -25,3 +25,7 @@ Un resultado adverso se registra igual que uno favorable. Si Yema gasta más par
 
 `python3 -m evals.ciego <runs> <ciego> <mapa.json> --tarea D` copia `<runs>/<sistema>/<n>.md` a `<ciego>/D-<letra>-<n>.md`, con letras al azar y los nombres de los sistemas borrados del texto. El mapa queda aparte. La jueza solo ve `<ciego>` y los criterios, fijados antes de ejecutar. El mapa se abre después del veredicto.
 
+## Huellas de método
+
+Cada resultado lleva `metodo.json` (`python3 -m evals.metodo …`) con las huellas del prerregistro (criterios), del corpus, de la política y de la implementación, y la lista de **limitaciones**, que es obligatoria. `metodo.diferencias(guardado, actual)` dice qué cambió entre dos ejecuciones: si cambian los criterios o el corpus, los resultados no son comparables.
+

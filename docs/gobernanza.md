@@ -25,7 +25,7 @@ Opcionales: `contexto` (cúpulas permitidas, fuentes), `spec`, `condiciones` (`p
 - `ambito.pruebas` / `ambito.pruebas_editables`: los tests que ya existían y casan con `pruebas` no se pueden modificar salvo que estén en `pruebas_editables`. Los tests nuevos, sí.
 
 - `ambito.raiz`: directorio absoluto donde se trabaja. `ambito.escritura` / `ambito.vetadas`: globs relativos.
-- `autoridad.efectos` / `autoridad.prohibidos`: de `leer, escribir, ejecutar, red, git-local, git-remoto, fusionar, publicar, delegar, escribir-cupula`.
+- `autoridad.efectos` / `autoridad.prohibidos`: de `leer, escribir, borrar, ejecutar, red, git-local, git-remoto, fusionar, publicar, delegar, escribir-cupula`.
 - `autoridad.ordenes`: prefijos de orden permitidos (`python3 -m unittest`, `cargo test`…). Las órdenes compuestas se rechazan siempre.
 - `autoridad.caduca`: obligatoria. Sin caducidad no hay contrato.
 - `recursos.efectos_max`: presupuesto de efectos materiales.
@@ -79,4 +79,16 @@ Al activar la firma, los contratos aprobados antes dejan de valer y hay que volv
 ## Comodines y búsquedas en lecturas vetadas
 
 Un comodín (`cat ~/.s*/id_*`) se juzga por lo que abriría al ejecutarse, no por su texto. Una búsqueda con Grep no puede abarcar una carpeta que contenga algo vetado, porque leería su contenido sin nombrarlo.
+
+## Borrar es un efecto aparte
+
+`rm`, `rmdir`, `unlink`, `shred`, `git rm`, `git clean` y `git branch -d/-D` exigen el efecto `borrar`. Conceder `escribir` ya no permite borrar.
+
+## La aprobación fija la política
+
+Con la firma activada, la aprobación guarda la huella de `gobierno/politica.json`. Si la política cambia después (otra cúpula legible, otra zona libre), el contrato deja de ser vigente hasta que la persona lo vuelva a aprobar: nadie trabaja con reglas que no vio al decir «sí».
+
+## Secretos fuera de los motivos y de la evidencia
+
+Los rechazos de la puerta citan la orden. Antes de mostrarlos o guardarlos, se sustituye por `***` todo lo que parezca un secreto: tokens de GitHub, OpenAI o AWS, credenciales en una URL y valores de `password=`, `token=`, `--token` y similares.
 

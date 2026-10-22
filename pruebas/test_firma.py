@@ -59,6 +59,7 @@ class TestPuertaConFirma(Entorno):
         c = base(self.trabajo)
         c, _ = contrato.transicion(c, "aprobado", "operadora", "ok", self.pol, AHORA)
         if firmar:
+            c["autoridad"]["aprobacion"]["politica"] = puerta.huella_politica(self.pol)  # como «yema aprobar»
             c["autoridad"]["aprobacion"]["firma"] = firma.firmar(c, firma.clave(self.yema, crear=True))
         c, _ = contrato.transicion(c, "aprovisionado", "operadora", "ok", self.pol, AHORA)
         c, _ = contrato.transicion(c, "activo", "operadora", "ok", self.pol, AHORA)

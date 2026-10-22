@@ -39,8 +39,10 @@ class TestArranqueSesion(unittest.TestCase):
             trabajo.mkdir()
             c = aprobado(trabajo)
             c["autoridad"]["caduca"] = "2999-01-01T00:00:00+00:00"
-            from nucleo import contrato, firma
+            from nucleo import contrato, firma, puerta
             c["autoridad"]["aprobacion"]["huella"] = contrato.huella(c)
+            pol = json.loads((RAIZ / "gobierno/politica.json").read_text())
+            c["autoridad"]["aprobacion"]["politica"] = puerta.huella_politica(pol)  # como «yema aprobar»
             c["autoridad"]["aprobacion"]["firma"] = firma.firmar(c, firma.clave(estado, crear=True))
             (estado / "contratos/C-0001.json").write_text(json.dumps(c))
             (estado / "contratos/ACTIVO").write_text("C-0001")
