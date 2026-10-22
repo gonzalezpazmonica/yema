@@ -251,9 +251,44 @@ def orden_de_gobierno(cmd, raiz, cwd):
     return None
 
 
-def lector_inerte(cmd, cwd, pol):
+def _peligroso(cmd):
+    """True si el shell interpretaría algo además de palabras literales.
+
+    Entre comillas simples todo es literal. Entre dobles, solo `$` y la comilla invertida
+    expanden. Fuera de comillas, cualquier metacarácter cuenta. Una barra invertida fuera de
+    comillas simples hace literal el carácter siguiente, salvo un salto de línea, que nunca vale.
+    Comillas sin cerrar: peligroso.
+    """
+    estado, i = "normal", 0
+    while i < len(cmd):
+        ch = cmd[i]
+        if ch == "\n":
+            return True
+        if estado == "simple":
+            if ch == "'":
+                estado = "normal"
+        elif ch == "\\":
+            if i + 1 < len(cmd) and cmd[i + 1] == "\n":
+                return True
+            i += 1
+        elif estado == "doble":
+            if ch == '"':
+                estado = "normal"
+            elif ch in "$`":
+                return True
+        elif ch == "'":
+            estado = "simple"
+        elif ch == '"':
+            estado = "doble"
+        elif ch in METACARACTERES:
+            return True
+        i += 1
+    return estado != "normal"
+
+
+def lector_inerte(cmd, cwd, pol, recursivo=False):
     """True si la orden solo lee o lista y no toca nada vetado por la política."""
-    if any(ch in METACARACTERES for ch in cmd):
+    if _peligroso(cmd):
         return False
     try:
         toks = shlex.split(cmd)
@@ -264,13 +299,44 @@ def lector_inerte(cmd, cwd, pol):
     args = toks[1:]
     if toks[0] == "find" and any(a in FIND_PELIGROSO for a in args):
         return False
-    if toks[0] == "grep" and any(a in GREP_RECURSIVO or (a.startswith("-") and not a.startswith("--") and "r" in a.lower())
-                                 for a in args):
+    if not recursivo and toks[0] == "grep" and any(es_grep_recursivo(a) for a in args):
         return False
     return not any(_vetada(_real(a, cwd), pol) for a in args if not a.startswith("-"))
 
 
 SEPARADORES_LECTURA = set(";`$<>()\n\\")
+
+
+def _sin_comillas_simples(cmd):
+    """El texto con los tramos entre comillas simples vaciados (dentro todo es literal)."""
+    return re.sub(r"'[^']*'", "''", cmd)
+
+
+def es_grep_recursivo(a):
+    return a in GREP_RECURSIVO or (a.startswith("-") and not a.startswith("--") and "r" in a.lower())
+
+
+def grep_recursivo_en_ambito(cmd, cwd, pol, base, estado):
+    """grep -r como lectura si todo lo que recorre está dentro del ámbito y no abarca nada vetado."""
+    if not lector_inerte(cmd, cwd, pol, recursivo=True):
+        return False
+    toks = shlex.split(cmd)
+    if toks[0] != "grep" or not any(es_grep_recursivo(a) for a in toks[1:]):
+        return False
+    rutas = [Path(os.path.realpath(os.path.join(cwd, a))) for a in toks[1:]
+             if not a.startswith("-") and os.path.exists(os.path.join(cwd, a))] or [Path(os.path.realpath(cwd))]
+    zonas = [Path(os.path.realpath(estado))]
+    for g in pol.get("lectura_vetada", []):
+        g = os.path.expanduser(g)
+        if "/" in g:
+            fijo = re.split(r"[*?\\[]", g, maxsplit=1)[0]
+            zonas.append(Path(os.path.realpath(fijo if fijo.endswith("/") else os.path.dirname(fijo) or "/")))
+    for r in rutas:
+        if not _dentro(r, base):
+            return False
+        if r.is_dir() and any(z == r or r in z.parents for z in zonas):
+            return False
+    return True
 
 
 REDIRECCION_INOCUA = re.compile(r"\s2>(&1|/dev/null)(?=\s|\||$)")
@@ -366,7 +432,7 @@ def lectura_encadenada(cmd, cwd, pol, raiz=None):
     """True si `cmd` es una cadena de lectores inertes unidos por && o |, con cd entre medias.
 
     Cada cd cambia el directorio con el que se resuelven (y se vetan) las rutas siguientes."""
-    if any(ch in SEPARADORES_LECTURA for ch in cmd) or "||" in cmd:
+    if any(ch in SEPARADORES_LECTURA for ch in _sin_comillas_simples(cmd)) or "||" in cmd:
         return False
     if "&" in cmd.replace("&&", ""):
         return False
@@ -576,6 +642,8 @@ def _decidir(ev, raiz, ahora=None):
 
     a, amb = c["autoridad"], c["ambito"]
     base = Path(os.path.realpath(amb["raiz"]))
+    if efecto == "bash" and grep_recursivo_en_ambito(sin_redireccion_inocua(entrada.get("command", "")), cwd, pol, base, estado):
+        return True, "", "leer"
     if efecto == "bash":
         efecto, norm, rutas = clasificar_orden(entrada.get("command", ""))
         if efecto is None:
