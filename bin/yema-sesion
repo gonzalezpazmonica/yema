@@ -1,0 +1,8 @@
+#!/bin/sh
+# Abre Claude Code en Yema solo con sus servidores MCP (.mcp.json), sin los conectores de la
+# cuenta (correo, Drive, calendario…). Fuerza la carga de herramientas bajo demanda: con pocas
+# herramientas MCP, Claude Code las cargaría todas de golpe (medido: 42k frente a 22k tokens).
+R="$(dirname "$(readlink -f "$0")")/.."
+cd "$R" || exit 1
+export ENABLE_TOOL_SEARCH="${YEMA_TOOL_SEARCH:-true}"  # auto cargaría todo de golpe
+exec claude --strict-mcp-config --mcp-config "$R/.mcp.json" "$@"
