@@ -254,6 +254,13 @@ def _instalar(codigo, estado, bindir):
     return 0
 
 
+def _id_de(fichero):
+    try:
+        return json.loads(fichero.read_text(encoding="utf-8")).get("id") or fichero.stem
+    except (OSError, ValueError):
+        return fichero.stem
+
+
 def situacion(codigo, ahora=None):
     """Estado visible para la persona: Trabajando, Comprobando, Lista o Necesita tu decisión."""
     codigo = Path(codigo)
@@ -275,7 +282,7 @@ def situacion(codigo, ahora=None):
         if usados >= c["recursos"].get("efectos_max", 0):
             return "Necesita tu decisión", f"{cid}: presupuesto agotado ({usados} efectos); hace falta una enmienda"
         return "Trabajando", f"{cid}: {c['proposito']} ({usados}/{c['recursos'].get('efectos_max', 0)} efectos)"
-    borradores = sorted(p.stem for p in (raiz / "contratos/borradores").glob("*.json"))
+    borradores = sorted(_id_de(p) for p in (raiz / "contratos/borradores").glob("*.json"))
     if borradores:
         return "Necesita tu decisión", f"borradores pendientes de aprobar: {', '.join(borradores)}"
     return "Lista", "sin encargo en curso"
@@ -327,8 +334,8 @@ def _aprobar(a, raiz, codigo, pol, tty):
         c["autoridad"]["aprobacion"]["politica"] = puerta.huella_politica(pol)
         c["autoridad"]["aprobacion"]["firma"] = firma.firmar(c, firma.clave(raiz, crear=True))
     contrato.guardar(_ruta(raiz, a.id), c)
-    borrador = raiz / "contratos/borradores" / f"{a.id}.json"
-    if borrador.exists():
+    borrador = puerta.ruta_de_borrador(raiz, a.id)
+    if borrador:
         borrador.unlink()
     (raiz / "contratos/ACTIVO").write_text(a.id)
     evidencia.anotar(raiz / "evidencia" / f"{a.id}.jsonl",
