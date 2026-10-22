@@ -825,6 +825,36 @@ def tiempo_agotado(c, ahora):
     return ahora > desde + timedelta(minutes=minutos)
 
 
+GIT_CONSULTAS = {"status", "log", "show", "diff", "rev-list", "merge-base", "rev-parse", "ls-files", "blame", "describe"}
+BRANCH_LISTAR = {"-a", "-r", "-v", "-vv", "--list", "--show-current", "--all", "--remotes", "--merged", "--no-merged",
+                 "--contains"}
+
+
+def es_git_de_lectura(toks):
+    """True si la orden git solo consulta (no cambia refs, índice, árbol ni configuración)."""
+    if not toks or os.path.basename(toks[0]) != "git":
+        return False
+    i = 1
+    while i < len(toks) and toks[i].startswith("-"):
+        i += 2 if toks[i] == "-C" else 1
+    resto = toks[i:]
+    if not resto or any(t.startswith("--output") or t.startswith("--ext-diff") for t in resto):
+        return False
+    sub, args = resto[0], resto[1:]
+    if sub in GIT_CONSULTAS:
+        return True
+    if sub == "branch":  # listar sí; un nombre suelto crearía una rama
+        previo = None
+        for a in args:
+            if a not in BRANCH_LISTAR and previo not in ("--contains", "--merged", "--no-merged"):
+                return False
+            previo = a
+        return True
+    if sub == "remote":
+        return all(a == "-v" for a in args)
+    return False
+
+
 def evaluar_y_registrar(ev, raiz, ahora=None):
     """decidir + presupuesto de efectos + recibo en el registro de evidencia."""
     ahora = ahora or datetime.now(timezone.utc)
@@ -834,6 +864,12 @@ def evaluar_y_registrar(ev, raiz, ahora=None):
     cid = c["id"] if c else "sin-contrato"
     registro = estado_de(raiz, _politica(raiz)) / "evidencia" / f"{cid}.jsonl"
     material = efecto not in ("leer", "interno", LECTURA_CONOCIDA)
+    if efecto == "git-local" and ev.get("tool_name") == "Bash":
+        _, sin_cd = _separar_cd(ev.get("tool_input") or {}, ev.get("cwd") or os.getcwd())
+        try:
+            material = material and not es_git_de_lectura(shlex.split(sin_cd.get("command", "")))
+        except ValueError:
+            pass
     if ok is PREGUNTAR:
         args = orden_de_gobierno(ev.get("tool_input", {}).get("command", ""), raiz, ev.get("cwd") or os.getcwd())
         tickets = estado_de(raiz, _politica(raiz)) / "aprobaciones"
