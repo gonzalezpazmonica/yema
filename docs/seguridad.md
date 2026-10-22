@@ -25,3 +25,17 @@ Cada «nunca» tiene una prueba que intenta hacerlo (`pruebas/`), y se comprueba
 ## Si encuentras un fallo
 
 Abre un aviso privado de seguridad en GitHub con la versión, un contrato de ejemplo y la entrada exacta que lo provoca. No lo publiques hasta que esté arreglado.
+
+## Alarma de nivel en las cúpulas
+
+Lo que Yema lee sale a un modelo en la nube. Antes de leer una cúpula, la puerta consulta el registro de cúpulas (`registro_cupulas` en la política):
+- Si la cúpula es N3 o N4, no se lee aunque esté permitida.
+- Si una nota declara `confidentiality: N3` o superior en su cabecera, `vault_read` se para aunque la cúpula sea N1 o N2.
+- Una ruta que intente salir de la cúpula también se para.
+
+Es una alarma, no la defensa principal. Si salta, hay que averiguar por qué esa nota está en una cúpula legible, no ampliar la lista. Límite conocido: una búsqueda (`vault_search`) en una cúpula N1 o N2 puede devolver fragmentos de una nota mal clasificada, porque la puerta ve la petición pero no la respuesta.
+
+## Presupuesto de tiempo
+
+`recursos.minutos_max` limita cuánto dura un contrato desde su última activación. Pasado ese tiempo, la puerta deniega los efectos materiales; leer sigue permitido. El presupuesto de efectos (`efectos_max`) sigue igual. Los tokens no son visibles para la puerta.
+

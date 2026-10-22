@@ -5,6 +5,7 @@ exit 2 bloquea con el motivo en stderr. Cualquier error bloquea.
 Sin contrato vigente solo se permiten los efectos de `efectos_sin_contrato`.
 """
 import fnmatch
+import glob
 import json
 import re
 import os
@@ -12,11 +13,11 @@ import shlex
 import shutil
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from nucleo import contrato, evidencia  # noqa: E402
+from nucleo import contrato, evidencia, firma  # noqa: E402
 
 INTERNAS = {"TodoWrite", "AskUserQuestion", "ToolSearch", "EnterPlanMode", "ExitPlanMode", "ListAgents", "Skill"}
 LECTURA = {"Read", "Glob", "Grep", "LS", "NotebookRead"}
@@ -32,6 +33,47 @@ def cupula_de(entrada):
 
 
 CUPULA_ESCRITURA = {"vault_write", "vault_rag_sync", "vault_index"}
+# Lo que Yema lee sale a un modelo en la nube: nada por encima de N2.
+NIVELES_ALTOS = ("N3", "N4")
+NIVEL_EN_NOTA = re.compile(r"^(?:confidentiality|confidencialidad|nivel)\s*:\s*(N[1-4]b?)\b", re.I | re.M)
+
+
+def _registro_cupulas(pol):
+    ruta = pol.get("registro_cupulas")
+    if not ruta:
+        return {}
+    try:
+        return json.loads(Path(os.path.expanduser(ruta)).read_text(encoding="utf-8")).get("domes", {})
+    except (OSError, ValueError):
+        return {}
+
+
+def nivel_alto_en_lectura(pol, cupula, ruta=None):
+    """Alarma, no defensa principal: motivo si la cúpula o la nota son N3+; None si no.
+
+    Si salta, busca por qué esa nota está en una cúpula legible; no amplíes la lista.
+    """
+    registro = _registro_cupulas(pol)
+    d = registro.get(cupula)
+    if not d:
+        return None
+    nivel = str(d.get("confidentiality", ""))
+    if nivel.upper().startswith(NIVELES_ALTOS):
+        return f"la cúpula {cupula} es {nivel}: nunca sale a la nube"
+    if not ruta:
+        return None
+    base = Path(os.path.realpath(os.path.expanduser(d.get("path", ""))))
+    nota = Path(os.path.realpath(base / ruta))
+    if base not in nota.parents:
+        return f"la ruta {ruta!r} sale de la cúpula {cupula}"
+    try:
+        cabeza = nota.read_text(encoding="utf-8", errors="replace")[:2000]
+    except OSError:
+        return None
+    m = NIVEL_EN_NOTA.search(cabeza)
+    if m and m.group(1).upper().startswith(NIVELES_ALTOS):
+        return f"la nota {ruta} es {m.group(1)} dentro de {cupula}: nunca sale a la nube"
+    return None
 METACARACTERES = set(";|&`$<>()\n\\")
 PROTEGIDAS = ("nucleo", "gobierno", "contratos", "evidencia", ".claude")
 IDENTIDAD = ("AGENTS.md", "CLAUDE.md", "ALMA.md")
@@ -84,6 +126,8 @@ def activo(raiz, pol, ahora):
         return None, "contrato no vigente: ACTIVO apunta a un contrato inexistente"
     c = contrato.cargar(ruta)
     ok, motivo = contrato.vigente(c, pol, ahora)
+    if ok and pol.get("firma_aprobacion") and not firma.verificar(c, firma.clave(raiz)):
+        ok, motivo = False, "contrato no vigente: la aprobación no tiene una firma válida"
     return (c, "") if ok else (None, motivo)
 
 
@@ -113,11 +157,32 @@ def _orden_casa(norm, patron):
 
 
 def _vetada(real, pol):
+    if firma.CARPETA in Path(real).parts:
+        return True  # la clave de aprobación nunca entra en el contexto
     for g in pol.get("lectura_vetada", []):
         g = os.path.expanduser(g)
         if fnmatch.fnmatch(str(real), g) or ("/" not in g and fnmatch.fnmatch(real.name, g)):
             return True
+    if any(ch in str(real) for ch in "*?["):
+        # Un comodín se expande al ejecutar: se juzga también lo que abriría, no solo el texto.
+        return any(_vetada(Path(os.path.realpath(x)), pol) for x in glob.glob(str(real)))
     return False
+
+
+def _vetada_dentro(carpeta, pol, estado):
+    """Primera zona vetada que cuelga de la carpeta (Grep lee contenido recursivamente); None si ninguna."""
+    carpeta = Path(carpeta)
+    zonas = [Path(os.path.realpath(estado)) / firma.CARPETA]
+    for g in pol.get("lectura_vetada", []):
+        g = os.path.expanduser(g)
+        if "/" not in g:
+            continue  # patrones por nombre (*.env): se juzgan fichero a fichero
+        fijo = re.split(r"[*?\[]", g, maxsplit=1)[0]
+        zonas.append(Path(os.path.realpath(fijo if fijo.endswith("/") else os.path.dirname(fijo) or "/")))
+    for z in zonas:
+        if z == carpeta or carpeta in z.parents:
+            return z
+    return None
 
 
 def clasificar_orden(cmd):
@@ -595,10 +660,17 @@ def _decidir(ev, raiz, ahora=None):
         permitidas = set(pol.get("cupulas_lectura", [])) | set((c or {}).get("contexto", {}).get("cupulas", []))
         if cupula_de(entrada) not in permitidas:
             return False, f"cúpula no permitida o sin indicar: {cupula_de(entrada)!r}", efecto
+        alto = nivel_alto_en_lectura(pol, cupula_de(entrada), entrada.get("path"))
+        if alto:
+            return False, alto, efecto
         return True, "", LECTURA_CONOCIDA
     if efecto == "leer":
         if real and _vetada(real, pol):
             return False, f"lectura vetada por la política: {real}", efecto
+        if herr == "Grep":
+            dentro = _vetada_dentro(real or Path(os.path.realpath(cwd)), pol, estado_de(raiz, pol))
+            if dentro:
+                return False, f"lectura vetada: la búsqueda abarca {dentro}; acota «path» a otra carpeta", efecto
         return True, "", efecto
 
     if efecto == "escribir":
@@ -658,6 +730,16 @@ def efectos_usados(registro):
                if x.get("permitido") is True and x.get("efecto") not in ("leer", "interno", "gobierno", LECTURA_CONOCIDA))
 
 
+def tiempo_agotado(c, ahora):
+    """True si pasó recursos.minutos_max desde la última activación."""
+    minutos = c.get("recursos", {}).get("minutos_max")
+    activaciones = [h["fecha"] for h in c.get("historial", []) if h.get("a") == "activo"]
+    if not minutos or not activaciones:
+        return False
+    desde = datetime.fromisoformat(activaciones[-1])
+    return ahora > desde + timedelta(minutes=minutos)
+
+
 def evaluar_y_registrar(ev, raiz, ahora=None):
     """decidir + presupuesto de efectos + recibo en el registro de evidencia."""
     ahora = ahora or datetime.now(timezone.utc)
@@ -676,6 +758,8 @@ def evaluar_y_registrar(ev, raiz, ahora=None):
         usados = efectos_usados(registro)
         if usados >= c["recursos"].get("efectos_max", 0):
             ok, motivo = False, con_que_hacer(f"presupuesto de efectos agotado ({usados})")
+        elif tiempo_agotado(c, ahora):
+            ok, motivo = False, con_que_hacer(f"presupuesto de tiempo agotado ({c['recursos']['minutos_max']} min)")
     if material or not ok:
         evidencia.anotar(registro, {"contrato": cid, "version": c["version"] if c else None,
                                     "herramienta": ev.get("tool_name"), "efecto": efecto,
