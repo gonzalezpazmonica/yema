@@ -565,6 +565,54 @@ def _separar_cd(entrada, cwd):
     return nuevo, {**entrada, "command": m.group(2).strip()}
 
 
+HEREDOC_CITADO = re.compile(r"(?P<orden>[^\n<]+?)\s*<<-?\s*(?P<q>['\"])(?P<tag>\w+)(?P=q)\n.*\n(?P=tag)\s*", re.S)
+FILTROS = {"head", "tail", "grep", "wc"}
+
+
+def _partir_tubos(cmd):
+    """Partes separadas por «|» fuera de comillas; None si hay «||» o comillas sin cerrar."""
+    partes, actual, estado, i = [], "", "normal", 0
+    while i < len(cmd):
+        ch = cmd[i]
+        if estado == "normal" and ch == "|":
+            if cmd[i:i + 2] == "||" or (i and cmd[i - 1] == "|"):
+                return None
+            partes.append(actual)
+            actual, i = "", i + 1
+            continue
+        if estado == "normal" and ch in "'\"":
+            estado = "simple" if ch == "'" else "doble"
+        elif estado == "simple" and ch == "'" or estado == "doble" and ch == '"':
+            estado = "normal"
+        actual += ch
+        i += 1
+    return None if estado != "normal" else partes + [actual]
+
+
+def _quitar_filtros_y_heredoc(entrada, cwd, pol):
+    """«orden | head…» y «intérprete <<'FIN' … FIN» se juzgan por la orden de cabeza.
+
+    Los filtros (head, tail, grep, wc) son lectores inertes: no ejecutan ni escriben. Un heredoc
+    citado no expande nada y solo alimenta la entrada estándar de la orden, que el contrato ya
+    concede. Lo demás (tubos hacia otra cosa, heredoc sin citar, algo detrás) no se toca.
+    """
+    cmd = entrada.get("command", "")
+    m = HEREDOC_CITADO.fullmatch(cmd)
+    if m:
+        lineas = cmd.rstrip().split("\n")[1:-1]
+        if any(l.strip("\t") == m.group("tag") for l in lineas):
+            return entrada  # bash cerraría antes y ejecutaría lo de detrás
+        return {**entrada, "command": m.group("orden").strip()}
+    partes = _partir_tubos(cmd)
+    if not partes or len(partes) < 2:
+        return entrada
+    for filtro in partes[1:]:
+        f = filtro.strip()
+        if not f or f.split()[0] not in FILTROS or not lector_inerte(f, cwd, pol):
+            return entrada
+    return {**entrada, "command": sin_redireccion_inocua(partes[0].strip()).strip()}
+
+
 def decidir(ev, raiz, ahora=None):
     """(permitido, motivo, efecto); cada rechazo dice qué hacer."""
     ok, motivo, efecto = _decidir(ev, raiz, ahora)
@@ -582,6 +630,7 @@ def _decidir(ev, raiz, ahora=None):
     cwd = ev.get("cwd") or os.getcwd()
     if herr == "Bash":
         cwd, entrada = _separar_cd(entrada, cwd)
+        entrada = _quitar_filtros_y_heredoc(entrada, cwd, _politica(raiz))
     efecto = efecto_de(herr, entrada)
     if efecto is None:
         return False, f"herramienta desconocida: {herr}", None
