@@ -15,7 +15,8 @@ from nucleo import contrato, puerta  # noqa: E402
 
 class TestPuerta(Entorno):
     def test_sin_contrato_solo_leer(self):
-        self.assertTrue(self.decide("Read", {"file_path": str(self.trabajo / "src/a.py")})[0])
+        self.assertTrue(self.decide("Read", {"file_path": str(self.yema / "nucleo/a.py")})[0])
+        self.assertFalse(self.decide("Read", {"file_path": str(self.trabajo / "src/a.py")})[0])  # no conocida
         self.assertFalse(self.decide("Write", {"file_path": str(self.trabajo / "src/a.py"), "content": ""})[0])
         self.assertFalse(self.decide("Bash", {"command": "git status"})[0])
 
@@ -150,6 +151,7 @@ class TestPuerta(Entorno):
         self.assertTrue(self.decide("Skill", {"skill": "contrato"})[0])
 
     def test_cadenas_que_solo_leen(self):
+        self.activar(aprobado(self.trabajo))  # sin contrato, el trabajo no es una carpeta conocida
         for cmd in ("cd src && ls -la", "cd src && find . -type f | head -20", "ls -la && pwd",
                     "find src -name '*.py' | wc -l", "cat src/a.py | grep -n foo"):
             ok, motivo, efecto = self.decide("Bash", {"command": cmd})
@@ -157,6 +159,7 @@ class TestPuerta(Entorno):
             self.assertEqual(efecto, "leer")
 
     def test_redirecciones_inocuas_en_lecturas(self):
+        self.activar(aprobado(self.trabajo))  # sin contrato, el trabajo no es una carpeta conocida
         for cmd in ("find src -type f 2>/dev/null | head -20", "ls -la src 2>&1", "cd src && grep -n foo a.py 2>&1 | head"):
             ok, motivo, efecto = self.decide("Bash", {"command": cmd})
             self.assertTrue(ok, f"{cmd}: {motivo}")
@@ -166,6 +169,7 @@ class TestPuerta(Entorno):
             self.assertFalse(self.decide("Bash", {"command": cmd})[0], cmd)
 
     def test_cadenas_con_gobierno_libre(self):
+        self.activar(aprobado(self.trabajo))  # sin contrato, el trabajo no es una carpeta conocida
         (self.yema / "nucleo/yema.py").write_text("")
         cli = f"python3 {self.yema}/nucleo/yema.py"
         for cmd in (f"cd src && ls -R | head -50 && {cli} cuidado 2>&1 | head -5",
@@ -191,15 +195,13 @@ class TestPuerta(Entorno):
                 ok, motivo, efecto = self.decide("Bash", {"command": cmd})
                 self.assertTrue(ok, motivo)
                 self.assertEqual(efecto, "leer-conocido", cmd)
-            ok, _, efecto = self.decide("Bash", {"command": "ls /etc"})
-            self.assertTrue(ok)
-            self.assertEqual(efecto, "leer")  # fuera: decide el arnés
-            ok, _, efecto = self.decide("Bash", {"command": "cat src/a.py /etc/hostname"})
-            self.assertEqual(efecto, "leer")
+            ok, motivo, _ = self.decide("Bash", {"command": "ls /etc"})
+            self.assertFalse(ok)  # fuera de lo conocido y sin contrato, la puerta deniega (L39 H3)
+            self.assertIn("fuera del ámbito", motivo)
+            self.assertFalse(self.decide("Bash", {"command": "cat src/a.py /etc/hostname"})[0])
         finally:
             del os.environ["YEMA_CARPETAS"]
-        ok, _, efecto = self.decide("Bash", {"command": "ls src"})
-        self.assertEqual(efecto, "leer")  # sin declarar, el trabajo no es conocido
+        self.assertFalse(self.decide("Bash", {"command": "ls src"})[0])  # sin declarar, el trabajo no es conocido
 
     def test_ejecutar_pruebas_sin_contrato_sugiere_yema_prueba(self):
         for cmd in ("cd src && python3 -m unittest discover 2>&1 | tail -40", "python3 -m pytest -q", "pytest -x",
@@ -253,6 +255,7 @@ class TestPuerta(Entorno):
         self.assertTrue(ok, motivo)
 
     def test_diff_es_lectura(self):
+        self.activar(aprobado(self.trabajo))  # sin contrato, el trabajo no es una carpeta conocida
         ok, motivo, efecto = self.decide("Bash", {"command": "diff -u src/a.py src/b.py"})
         self.assertTrue(ok, motivo)
         self.assertEqual(efecto, "leer")
@@ -268,11 +271,13 @@ class TestPuerta(Entorno):
             self.assertFalse(self.decide("Bash", {"command": cmd})[0], cmd)
 
     def test_lectores_inertes_sin_contrato(self):
+        os.environ["YEMA_CARPETAS"] = str(self.trabajo)
+        self.addCleanup(os.environ.pop, "YEMA_CARPETAS", None)
         for cmd in ("ls -la src", "find src -name '*.py'", "cat src/a.py", "head -5 src/a.py", "wc -l src/a.py",
                     "grep -n foo src/a.py", "tree src", "pwd", "stat src"):
             ok, motivo, efecto = self.decide("Bash", {"command": cmd})
             self.assertTrue(ok, f"{cmd}: {motivo}")
-            self.assertEqual(efecto, "leer")
+            self.assertEqual(efecto, "leer-conocido")
 
     def test_lectores_que_no_son_inertes(self):
         for cmd in ("find src -delete", "find . -exec rm {} +", "find . -execdir sh", "find . -fprint /tmp/x",

@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from apoyo_test import AHORA, Entorno, base, politica  # noqa: E402
+from apoyo_test import AHORA, Entorno, aprobado, base, politica  # noqa: E402
 from nucleo import contrato, firma, puerta, yema  # noqa: E402
 
 
@@ -99,6 +99,7 @@ class TestPuertaConFirma(Entorno):
         self.assertIn("vetada", motivo)
 
     def test_grep_en_el_proyecto_sigue_permitido(self):
+        self.activo_firmado()
         self.assertTrue(self.decide("Grep", {"pattern": "x", "path": str(self.trabajo)})[0])
 
     def test_la_clave_no_se_escribe(self):
@@ -125,6 +126,7 @@ class TestComodinesEnVetadas(Entorno):
         self.assertFalse(self.decide("Grep", {"pattern": "BEGIN", "path": str(Path(self.tmp.name) / "casa")})[0])
 
     def test_comodin_inocente_sigue_permitido(self):
+        self.activar(aprobado(self.trabajo))  # sin contrato, el trabajo no es una carpeta conocida
         (self.trabajo / "src/a.py").write_text("x")
         self.assertTrue(self.decide("Bash", {"command": f"cat {self.trabajo}/src/*.py"})[0])
 

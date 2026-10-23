@@ -76,6 +76,13 @@ def errores(c):
         e.append(f"efecto concedido y prohibido a la vez: {x}")
     if not str(amb.get("raiz", "")).startswith("/"):
         e.append("ambito.raiz debe ser absoluta")
+    lectura = amb.get("lectura", [])
+    if not isinstance(lectura, list):
+        e.append("ambito.lectura debe ser una lista de carpetas absolutas")
+    else:
+        for x in lectura:
+            if not isinstance(x, str) or not x.startswith("/") or not x.strip("/"):
+                e.append(f"ambito.lectura: {x!r} debe ser una carpeta absoluta y no la raíz del disco")
     for g in amb.get("escritura", []) + amb.get("vetadas", []):
         if not _glob_seguro(g):
             e.append(f"glob inseguro {g!r}: relativo a la raíz, sin '..'")
@@ -160,6 +167,10 @@ def resumen(c):
         f"Contrato {c.get('id')} v{c.get('version')} · nivel {c.get('nivel')} · huella {huella(c)[:8]}",
         f"Para qué: {c.get('proposito')}",
         f"Dónde: {amb.get('raiz')}",
+    ]
+    if amb.get("lectura"):
+        lineas.append(f"Puede leer además: {', '.join(amb['lectura'])}")
+    lineas += [
         f"Puede: {', '.join(a.get('efectos', [])) or 'nada'}",
         f"Puede escribir en: {', '.join(amb.get('escritura', [])) or 'ningún sitio'}",
         f"Órdenes: {'; '.join(a.get('ordenes', [])) or 'ninguna'}",

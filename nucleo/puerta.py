@@ -354,7 +354,15 @@ def lector_inerte(cmd, cwd, pol, recursivo=False):
         return False
     if not recursivo and toks[0] == "grep" and any(es_grep_recursivo(a) for a in args):
         return False
-    return not any(_vetada(_real(a, cwd), pol) for a in args if not a.startswith("-"))
+    return not any(_vetada(_real(x, cwd), pol) for a in args if not a.startswith("-") for x in _llaves(a))
+
+
+def _llaves(t):
+    """Las palabras en que bash expande las llaves de `t` ({a,b}); cada una se juzga por separado."""
+    m = re.search(r"\{([^{}]*,[^{}]*)\}", t)
+    if not m:
+        return [t]
+    return [x for alt in m.group(1).split(",") for x in _llaves(t[:m.start()] + alt + t[m.end():])]
 
 
 SEPARADORES_LECTURA = set(";`$<>()\n\\")
@@ -459,28 +467,156 @@ def carpetas_conocidas(raiz, estado):
     return [Path(os.path.realpath(d)) for d in dirs]
 
 
-def rutas_de_lectura(cmd, cwd):
-    """Rutas que toca una lectura (argumentos, destinos de cd y el directorio de trabajo)."""
-    actual, rutas = cwd, []
+def bases_de_lectura(raiz, estado, c):
+    """Donde se puede leer: las carpetas conocidas y, con contrato, su raíz y lo que declare en ambito.lectura."""
+    bases = carpetas_conocidas(raiz, estado)
+    if c:
+        r = Path(os.path.realpath(c["ambito"]["raiz"]))
+        bases += [r] + [_real(x, r) for x in c["ambito"].get("lectura", [])]
+    return bases
+
+
+def fuera_de(rutas, bases):
+    """Primera ruta que no cuelga de ninguna base; None si todas están dentro."""
+    return next((r for r in rutas if not any(_dentro(r, b) for b in bases)), None)
+
+
+GREP_CON_VALOR = {"-A", "-B", "-C", "-m", "-e", "-f", "--regexp", "--file", "--max-count", "--context",
+                  "--after-context", "--before-context", "--include", "--exclude", "--exclude-dir", "--label"}
+
+
+def _argumentos_ruta(toks):
+    """Los argumentos de un lector que son rutas. En grep, el patrón no es una ruta (y -f sí lo es)."""
+    if toks[0] != "grep":
+        return [t for t in toks[1:] if not t.startswith("-")]
+    rutas, sueltos, patron_en_opcion, i = [], [], False, 1
+    while i < len(toks):
+        t = toks[i]
+        if t in GREP_CON_VALOR and i + 1 < len(toks):
+            patron_en_opcion |= t in ("-e", "--regexp", "-f", "--file")
+            if t in ("-f", "--file"):
+                rutas.append(toks[i + 1])
+            i += 2
+            continue
+        if t.startswith(("--regexp=", "--file=")):
+            patron_en_opcion = True
+            if t.startswith("--file="):
+                rutas.append(t.split("=", 1)[1])
+        elif not t.startswith("-"):
+            sueltos.append(t)
+        i += 1
+    return rutas + (sueltos if patron_en_opcion else sueltos[1:])
+
+
+def _tramos(cmd, cwd):
+    """(tokens, carpeta en la que corre) de cada tramo de una lectura; cada cd cambia la carpeta.
+
+    ValueError si un tramo es ilegible."""
+    actual = cwd
+    if not _peligroso(cmd):  # una orden simple: si lleva | o &&, van entre comillas
+        yield shlex.split(cmd), actual
+        return
     for parte in cmd.split("&&"):
         for tramo in parte.split("|"):
-            try:
-                toks = shlex.split(tramo.strip())
-            except ValueError:
-                return None
+            toks = shlex.split(tramo.strip())
             if toks and toks[0] == "cd" and len(toks) == 2:
                 actual = str(_real(toks[1], actual))
+            yield toks, actual
+
+
+def rutas_de_lectura(cmd, cwd):
+    """Rutas que toca una lectura (argumentos, destinos de cd y el directorio de trabajo)."""
+    rutas = []
+    try:
+        for toks, actual in _tramos(cmd, cwd):
+            if not toks:
+                continue
+            if toks[0] == "cd" and len(toks) == 2:
                 rutas.append(Path(actual))
                 continue
-            args = [t for t in toks[1:] if not t.startswith("-")]
+            args = [x for t in _argumentos_ruta(toks) for x in _llaves(t)]
             rutas += [_real(t, actual) for t in args] if args else [_real(actual, actual)]
+            for t in args:  # un comodín se juzga también por lo que abriría (un enlace que sale, por ejemplo)
+                if any(ch in t for ch in "*?["):
+                    rutas += [Path(os.path.realpath(x)) for x in glob.glob(os.path.join(actual, os.path.expanduser(t)))]
+    except ValueError:
+        return None
     return rutas
 
 
 def lectura_en_conocidas(cmd, cwd, raiz, estado):
     rutas = rutas_de_lectura(cmd, cwd)
-    dirs = carpetas_conocidas(raiz, estado)
-    return rutas is not None and all(any(_dentro(r, d) for d in dirs) for r in rutas)
+    return rutas is not None and fuera_de(rutas, carpetas_conocidas(raiz, estado)) is None
+
+
+ENLACES_MAX = 200000
+
+
+def enlace_que_sale(carpeta, bases):
+    """Primer enlace simbólico bajo `carpeta` que apunta fuera de las bases (una lectura que sigue
+    enlaces saldría por él); None si ninguno. Un árbol demasiado grande cuenta como si saliera."""
+    pendientes, vistos = [Path(carpeta)], 0
+    while pendientes:
+        try:
+            entradas = list(os.scandir(pendientes.pop()))
+        except OSError:
+            continue
+        for e in entradas:
+            vistos += 1
+            if vistos > ENLACES_MAX:
+                return Path(carpeta)
+            if e.is_symlink():
+                if fuera_de([Path(os.path.realpath(e.path))], bases):
+                    return Path(e.path)
+            elif e.is_dir(follow_symlinks=False):
+                pendientes.append(Path(e.path))
+    return None
+
+
+def _sigue_enlaces(toks):
+    """True si el lector recorre carpetas siguiendo enlaces simbólicos (grep -R, diff -r)."""
+    corta = [a for a in toks[1:] if a.startswith("-") and not a.startswith("--")]
+    if toks[0] == "grep":
+        return "--dereference-recursive" in toks or any("R" in a for a in corta)
+    if toks[0] == "diff":
+        return "--recursive" in toks or any("r" in a for a in corta)
+    return False
+
+
+def lectura_bash_fuera(cmd, cwd, bases):
+    """Motivo si una lectura por Bash toca algo fuera de las bases (también por un enlace que
+    siga al recorrer carpetas); None si todo está dentro."""
+    rutas = rutas_de_lectura(cmd, cwd)
+    if rutas is None:
+        return "orden ilegible"
+    fuera = fuera_de(rutas, bases)
+    if fuera:
+        return f"lectura fuera del ámbito y de las carpetas conocidas: {fuera}"
+    for toks, actual in _tramos(cmd, cwd):
+        if toks and _sigue_enlaces(toks):
+            for a in _argumentos_ruta(toks) or ["."]:
+                r = _real(a, actual)
+                enlace = r.is_dir() and enlace_que_sale(r, bases)
+                if enlace:
+                    return f"lectura fuera del ámbito: {enlace} es un enlace que sale (o el árbol es demasiado grande)"
+    return None
+
+
+GLOB_SALE = re.compile(r"(^|[/{,])\.\.([/},]|$)|[{,][/~]")
+
+
+def glob_fuera(patron, carpeta, bases):
+    """Motivo si el patrón de Glob abarca algo fuera de las bases; None si no."""
+    if GLOB_SALE.search(patron):
+        return f"lectura fuera del ámbito: el patrón {patron!r} sale de la carpeta con '..' o una alternativa absoluta"
+    fijo = []
+    for parte in patron.split("/"):
+        if any(ch in parte for ch in "*?[{"):
+            break
+        fijo.append(parte)
+    prefijo = "/".join(fijo) or ("/" if patron.startswith("/") else ".")
+    fuera = fuera_de([_real(prefijo, carpeta)], bases)
+    return f"lectura fuera del ámbito y de las carpetas conocidas: {fuera}" if fuera else None
 
 
 def lectura_encadenada(cmd, cwd, pol, raiz=None):
@@ -589,6 +725,7 @@ def _ruta_de(entrada):
 
 
 QUE_HACER = (
+    ("lectura fuera del ámbito", "lee dentro del ámbito o de las carpetas conocidas; si hace falta otra carpeta, propón una enmienda que la declare en ambito.lectura o pide a la persona que la añada a additionalDirectories."),
     ("orden fuera del ámbito", "lánzala desde la carpeta del contrato: «cd <raíz del contrato> && <orden>» (un cd y una orden simple)."),
     ("datos privados", "reformula la consulta en términos genéricos, sin nombres, correos, IP ni datos del proyecto."),
     ("ejecutar pruebas sin contrato", "usa «yema prueba <carpeta> -- <orden>» (copia aislada, sin red ni hogar; admite --parche)."),
@@ -672,7 +809,8 @@ def _quitar_filtros_y_heredoc(entrada, cwd, pol):
 
     Los filtros (head, tail, grep, wc) son lectores inertes: no ejecutan ni escriben. Un heredoc
     citado no expande nada y solo alimenta la entrada estándar de la orden, que el contrato ya
-    concede. Lo demás (tubos hacia otra cosa, heredoc sin citar, algo detrás) no se toca.
+    concede. Lo demás (tubos hacia otra cosa, heredoc sin citar, algo detrás) no se toca, y
+    tampoco un filtro que abra ficheros fuera de la carpeta en la que corre la orden.
     """
     cmd = entrada.get("command", "")
     m = HEREDOC_CITADO.fullmatch(cmd)
@@ -687,6 +825,9 @@ def _quitar_filtros_y_heredoc(entrada, cwd, pol):
     for filtro in partes[1:]:
         f = filtro.strip()
         if not f or f.split()[0] not in FILTROS or not lector_inerte(f, cwd, pol):
+            return entrada
+        rutas = rutas_de_lectura(f, cwd)
+        if rutas is None or fuera_de(rutas, [Path(os.path.realpath(cwd))]):
             return entrada
     return {**entrada, "command": sin_redireccion_inocua(partes[0].strip()).strip()}
 
@@ -717,19 +858,30 @@ def _decidir(ev, raiz, ahora=None):
     if efecto == "bash":
         args = orden_de_gobierno(entrada.get("command", ""), raiz, cwd)
         if args is not None:
-            return decidir_gobierno(args, ev, estado)
+            return decidir_gobierno(args, ev, estado)  # sin cargar el contrato: suspender siempre funciona
+    c, motivo_c = activo(raiz, pol, ahora)
+    if efecto == "bash":
+        # Leer también está acotado: carpetas conocidas y, con contrato, su ámbito y ambito.lectura.
         lectura = sin_redireccion_inocua(entrada.get("command", ""))
-        if grep_recursivo_en_ambito(lectura, cwd, pol, carpetas_conocidas(raiz, estado), estado):
+        conocidas, bases = carpetas_conocidas(raiz, estado), bases_de_lectura(raiz, estado, c)
+        if grep_recursivo_en_ambito(lectura, cwd, pol, conocidas, estado) and not lectura_bash_fuera(lectura, cwd, conocidas):
             return True, "", LECTURA_CONOCIDA  # leer es libre en carpetas conocidas, también recursivo
+        if grep_recursivo_en_ambito(lectura, cwd, pol, bases, estado) and not lectura_bash_fuera(lectura, cwd, bases):
+            return True, "", "leer"
         if lector_inerte(lectura, cwd, pol) or lectura_encadenada(lectura, cwd, pol, raiz):
+            fuera = lectura_bash_fuera(lectura, cwd, bases)
+            if fuera:
+                return False, fuera, "leer"
             return True, "", LECTURA_CONOCIDA if lectura_en_conocidas(lectura, cwd, raiz, estado) else "leer"
+        if lector_inerte(lectura, cwd, pol, recursivo=True):
+            return False, (lectura_bash_fuera(lectura, cwd, bases)
+                           or "lectura vetada: la búsqueda abarca el estado privado o algo vetado; acota la carpeta"), "leer"
         if mkdir_en_zona_libre(entrada.get("command", ""), cwd, estado, pol):
             return True, "", "escribir"
-        if EJECUTA_PRUEBAS.search(entrada.get("command", "")) and activo(raiz, pol, ahora)[0] is None:
+        if EJECUTA_PRUEBAS.search(entrada.get("command", "")) and c is None:
             return False, "ejecutar pruebas sin contrato se hace en una copia aislada", "ejecutar"
         if any(ch in METACARACTERES for ch in entrada.get("command", "")):
             return False, "orden compuesta, con redirección o sustitución: pártela en órdenes simples", "bash"
-    c, motivo_c = activo(raiz, pol, ahora)
     ruta = _ruta_de(entrada)
     real = _real(ruta, cwd) if ruta else None
 
@@ -747,10 +899,21 @@ def _decidir(ev, raiz, ahora=None):
     if efecto == "leer":
         if real and _vetada(real, pol):
             return False, f"lectura vetada por la política: {real}", efecto
+        objetivo, bases = real or Path(os.path.realpath(cwd)), bases_de_lectura(raiz, estado, c)
+        fuera = fuera_de([objetivo], bases)
+        if fuera:
+            return False, f"lectura fuera del ámbito y de las carpetas conocidas: {fuera}", efecto
+        if herr == "Glob":
+            motivo = glob_fuera(str(entrada.get("pattern", "")), objetivo, bases)
+            if motivo:
+                return False, motivo, efecto
         if herr == "Grep":
-            dentro = _vetada_dentro(real or Path(os.path.realpath(cwd)), pol, estado_de(raiz, pol))
+            dentro = _vetada_dentro(objetivo, pol, estado)
             if dentro:
                 return False, f"lectura vetada: la búsqueda abarca {dentro}; acota «path» a otra carpeta", efecto
+            enlace = objetivo.is_dir() and enlace_que_sale(objetivo, bases)
+            if enlace:
+                return False, f"lectura fuera del ámbito: {enlace} es un enlace que sale (o el árbol es demasiado grande); acota «path»", efecto
         return True, "", efecto
 
     if efecto == "escribir":
@@ -771,8 +934,6 @@ def _decidir(ev, raiz, ahora=None):
 
     a, amb = c["autoridad"], c["ambito"]
     base = Path(os.path.realpath(amb["raiz"]))
-    if efecto == "bash" and grep_recursivo_en_ambito(sin_redireccion_inocua(entrada.get("command", "")), cwd, pol, base, estado):
-        return True, "", "leer"
     if efecto == "bash":
         efecto, norm, rutas = clasificar_orden(entrada.get("command", ""))
         if efecto is None:
