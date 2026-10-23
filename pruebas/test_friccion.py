@@ -11,6 +11,10 @@ from apoyo_test import Entorno, aprobado, politica  # noqa: E402
 
 
 class TestComillas(Entorno):
+    def setUp(self):
+        super().setUp()
+        self.activar(aprobado(self.trabajo))  # sin contrato, el trabajo no es una carpeta conocida
+
     def leer(self, cmd):
         return self.decide("Bash", {"command": cmd})
 

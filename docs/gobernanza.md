@@ -25,6 +25,7 @@ Opcionales: `contexto` (cúpulas permitidas, fuentes), `spec`, `condiciones` (`p
 - `ambito.pruebas` / `ambito.pruebas_editables`: los tests que ya existían y casan con `pruebas` no se pueden modificar salvo que estén en `pruebas_editables`. Los tests nuevos, sí.
 
 - `ambito.raiz`: directorio absoluto donde se trabaja. `ambito.escritura` / `ambito.vetadas`: globs relativos.
+- `ambito.lectura` (opcional): carpetas absolutas, fuera de la raíz, que el contrato deja leer. `yema resumen` las enseña como «Puede leer además».
 - `autoridad.efectos` / `autoridad.prohibidos`: de `leer, escribir, borrar, ejecutar, red, git-local, git-remoto, fusionar, publicar, delegar, escribir-cupula`.
 - `autoridad.ordenes`: prefijos de orden permitidos (`python3 -m unittest`, `cargo test`…). Las órdenes compuestas se rechazan siempre.
 - `autoridad.caduca`: obligatoria. Sin caducidad no hay contrato.
@@ -95,6 +96,10 @@ Los rechazos de la puerta citan la orden. Antes de mostrarlos o guardarlos, se s
 ## Buscar dentro de las carpetas es leer
 
 `grep -r` es una lectura. Sin contrato se permite en las carpetas conocidas (el repo de Yema, su estado, las declaradas en la configuración local o en `YEMA_CARPETAS`), y con contrato dentro de su ámbito. En los dos casos, solo si lo que recorre no abarca el estado privado ni nada vetado. Una búsqueda en una carpeta desconocida sigue denegada.
+
+## Leer también está acotado
+
+Leer no es libre en todo el disco: la puerta solo deja leer (Read, Grep, Glob y las órdenes de lectura por Bash) dentro de las carpetas conocidas y, con contrato, de su `ambito.raiz` y de lo que declare en `ambito.lectura`. Lo vetado por la política sigue vetado aunque esté dentro. La ruta se juzga ya resuelta: `..`, enlaces simbólicos, comodines y llaves (`{a,b}`) cuentan por lo que abrirían. Una búsqueda que sigue enlaces (Grep, `grep -R`, `diff -r`) se deniega si dentro hay un enlace que sale. Lo detectó L39 (H3): con un contrato E2, Yema leyó un secreto fuera de su ámbito y lo devolvió en su resumen.
 
 ## Aprobar con `!` no vale
 

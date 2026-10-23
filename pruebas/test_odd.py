@@ -202,8 +202,8 @@ class TestGarantiasPorElHookReal(unittest.TestCase):
         r = self.hook("Bash", {"command": f"python3 {RAIZ}/nucleo/yema.py estado"})
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(json.loads(r.stdout)["hookSpecificOutput"]["permissionDecision"], "allow")
-        r = self.hook("Read", {"file_path": str(self.trabajo / "src/a.py")})
-        self.assertEqual(r.returncode, 0)
+        r = self.hook("Read", {"file_path": str(RAIZ / "README.md")})
+        self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(r.stdout.strip(), "")  # las lecturas las sigue decidiendo el arnés
         c = base(self.trabajo)
         c["autoridad"]["caduca"] = "2999-01-01T00:00:00+00:00"
@@ -226,12 +226,13 @@ class TestGarantiasPorElHookReal(unittest.TestCase):
         r = self.hook("Bash", {"command": f"ls {RAIZ}/docs"})
         self.assertEqual(json.loads(r.stdout)["hookSpecificOutput"]["permissionDecision"], "allow", r.stderr)
         r = self.hook("Bash", {"command": "ls /etc"})
-        self.assertEqual(r.returncode, 0)
-        self.assertEqual(r.stdout.strip(), "")
+        self.assertEqual(r.returncode, 2)  # fuera de lo conocido y sin contrato, la puerta deniega
+        self.assertIn("fuera del ámbito", r.stderr)
 
     def test_garantias(self):
         casos = [
-            ("leer sin contrato", "Read", {"file_path": str(self.trabajo / "src/a.py")}, 0),
+            ("leer sin contrato en lo conocido", "Read", {"file_path": str(RAIZ / "README.md")}, 0),
+            ("leer sin contrato fuera de lo conocido", "Read", {"file_path": str(self.trabajo / "src/a.py")}, 2),
             ("escribir sin contrato", "Write", {"file_path": str(self.trabajo / "src/a.py")}, 2),
             ("borrador libre", "Write", {"file_path": str(self.estado / "contratos/borradores/C-1.json")}, 0),
             ("núcleo protegido", "Edit", {"file_path": str(RAIZ / "nucleo/puerta.py")}, 2),
