@@ -136,8 +136,10 @@ def transicion(c, nuevo, quien, motivo, politica, ahora=None):
 def vigente(c, politica, ahora=None):
     """(True, '') si el contrato autoriza efectos ahora mismo."""
     ahora = ahora or datetime.now(timezone.utc)
-    if errores(c):
-        return False, "contrato inválido"
+    e = errores(c)
+    if e:
+        return False, ("contrato inválido: " + "; ".join(e)
+                       + ". Hace falta una nueva versión del contrato aprobada por la persona")
     if c["estado"] != "activo":
         return False, f"contrato no vigente: estado {c['estado']}"
     ap = c["autoridad"].get("aprobacion")
