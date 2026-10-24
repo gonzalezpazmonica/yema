@@ -213,9 +213,48 @@ def huella_politica(pol):
     return hashlib.sha256(canon.encode()).hexdigest()
 
 
+COAUTOR = re.compile(r"Co-Authored-By: [^\s<>\"'`$\\;|&()]+(?: [^\s<>\"'`$\\;|&()]+)* "
+                     r"(<[\w.+-]+@[\w-]+(?:\.[\w-]+)+>)")
+
+
+def _comillas_al_final(texto):
+    """Comilla abierta al terminar el texto («'» o «\"») o None."""
+    estado = None
+    for ch in texto:
+        if estado is None and ch in "'\"":
+            estado = ch
+        elif ch == estado:
+            estado = None
+    return estado
+
+
+def sin_coautor(cmd):
+    """La orden sin el «<correo>» del trailer «Co-Authored-By: Nombre <correo>» de un `git commit`.
+
+    Solo vale si el trailer es todo el argumento (abre y cierra la misma comilla) y la orden es un
+    commit; cualquier otro «<» o «>» se queda y la orden se rechaza como siempre."""
+    try:
+        toks = shlex.split(cmd)
+    except ValueError:
+        return cmd
+    i = 1
+    while i < len(toks) and toks[i].startswith("-"):
+        i += 2 if toks[i] == "-C" else 1
+    if not toks or os.path.basename(toks[0]) != "git" or toks[i:i + 1] != ["commit"]:
+        return cmd
+    salida, pos = "", 0
+    for m in COAUTOR.finditer(cmd):
+        ini = m.start()
+        q = cmd[ini - 1] if ini else ""
+        if q in ("'", '"') and _comillas_al_final(cmd[:ini - 1]) is None and cmd[m.end():m.end() + 1] == q:
+            salida += cmd[pos:m.start(1)]
+            pos = m.end(1)
+    return salida + cmd[pos:]
+
+
 def clasificar_orden(cmd):
     """(efecto, tokens normalizados, rutas -C) o (None, motivo, [])."""
-    if any(ch in METACARACTERES for ch in cmd):
+    if any(ch in METACARACTERES for ch in sin_coautor(cmd)):
         return None, "orden compuesta, con redirección o sustitución: pártela en órdenes simples", []
     try:
         toks = shlex.split(cmd)
@@ -637,7 +676,7 @@ def _separar_cd(entrada, cwd):
     cualquier otra composición sigue rechazándose entera.
     """
     m = CD_Y_ORDEN.fullmatch(entrada.get("command", ""))
-    if not m or any(ch in METACARACTERES for ch in m.group(2)):
+    if not m or any(ch in METACARACTERES for ch in sin_coautor(m.group(2))):
         return cwd, entrada
     nuevo = os.path.realpath(os.path.join(cwd, os.path.expanduser(m.group(1))))
     return nuevo, {**entrada, "command": m.group(2).strip()}
@@ -727,7 +766,7 @@ def _decidir(ev, raiz, ahora=None):
             return True, "", "escribir"
         if EJECUTA_PRUEBAS.search(entrada.get("command", "")) and activo(raiz, pol, ahora)[0] is None:
             return False, "ejecutar pruebas sin contrato se hace en una copia aislada", "ejecutar"
-        if any(ch in METACARACTERES for ch in entrada.get("command", "")):
+        if any(ch in METACARACTERES for ch in sin_coautor(entrada.get("command", ""))):
             return False, "orden compuesta, con redirección o sustitución: pártela en órdenes simples", "bash"
     c, motivo_c = activo(raiz, pol, ahora)
     ruta = _ruta_de(entrada)
