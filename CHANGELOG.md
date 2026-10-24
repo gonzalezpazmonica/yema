@@ -1,5 +1,9 @@
 # Cambios
 
+## Sin publicar
+
+- **Órdenes aisladas por el kernel (Landlock)**: lo que la puerta deja ejecutar bajo contrato corre con lectura y escritura acotadas al ámbito (`nucleo/aislar.py`); sin Landlock no corre, salvo `ambito.aislamiento: "si_hay"`, que `yema resumen` muestra. Cierra el hallazgo L39: un script concedido leía cualquier fichero del disco.
+
 ## 0.1.0 · 2026-10-21 · Primera release pública
 
 Yema nace: una compañera de trabajo con IA que hace trabajo largo dentro de contratos que aprueba una persona, con una puerta fuera del modelo que hace cumplir sus límites.

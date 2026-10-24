@@ -55,10 +55,11 @@ borrador → cuestionado → candidato → en_revision → aprobado → aprovisi
 | Evidencia | Recibo encadenado por hash de cada efecto material y cada rechazo | `test_evidencia` |
 | Revocabilidad | Suspender/revocar quita el puntero y la puerta vuelve a E0 | `test_contrato_revocado_vuelve_a_e0` |
 | Evolución controlada | Huella sellada al aprobar | `test_cambio_tras_aprobar_invalida` |
+| Aislamiento | Las órdenes concedidas corren bajo Landlock: leen y escriben solo en el ámbito | `test_l39_de_punta_a_punta` |
 
 ## Límites conocidos de la v0 (honestidad)
 
-- Una orden permitida puede hacer más de lo que su nombre sugiere (`python3 -m unittest` ejecuta código del repo). La frontera fuerte es el sistema operativo: en Space, el sandbox del modo mediado.
+- Una orden permitida puede hacer más de lo que su nombre sugiere (`python3 -m unittest` ejecuta código del repo). Corre bajo Landlock: el kernel solo le deja leer el ámbito, sus carpetas de lectura y el sistema, y escribir en el ámbito. Sigue teniendo red, y git, npm, cargo y pip no se aíslan. La frontera completa es el sandbox del modo mediado de Space.
 - La puerta solo ve lo que el arnés le enseña. Si el arnés no pasa una herramienta por el hook, no la controla.
 - El diálogo y la terminal prueban que alguien con acceso a la sesión contestó, no quién. La firma llega en la v1.
 - El presupuesto cuenta efectos, no tokens: el arnés no expone el consumo al hook.
