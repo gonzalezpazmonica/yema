@@ -260,8 +260,7 @@ class TestSesionCodex(unittest.TestCase):
         self.assertEqual(cfg["model_reasoning_effort"], "medium")
         self.assertEqual(cfg["web_search"], "disabled")
         self.assertEqual(cfg["project_root_markers"], [])
-        self.assertEqual(set(cfg["mcp_servers"]), {"savia-vaults"})
-        self.assertTrue(cfg["mcp_servers"]["savia-vaults"]["required"])
+        self.assertEqual(cfg["mcp_servers"], {})
         for opcion in ("--no-daemon", "--strict-config", "--ignore-user-config", "--ephemeral"):
             self.assertIn(opcion, orden)
         for feature in ("apps", "plugins", "multi_agent"):
@@ -274,19 +273,22 @@ class TestSesionCodex(unittest.TestCase):
         pre = cfg["hooks"]["PreToolUse"][0]
         self.assertEqual(pre["matcher"], "*")
         comando = pre["hooks"][0]["command"]
-        self.assertIn("adaptadores/codex/puerta.py", comando)
+        self.assertIn("adaptadores/codex/vigilante.py", comando)
         self.assertIn("SessionStart", cfg["hooks"])
         r = subprocess.run(["sh", "-c", comando.replace(sys.executable, "/no/existe/python", 1)],
                            capture_output=True, text=True)
         self.assertEqual(r.returncode, 2)
 
-    def test_escritura_solo_explicita_y_prompt_literal(self):
+    def test_escritura_retirada_y_prompt_literal(self):
         args = self.args()
         args.experimental_workspace_write = True
+        with self.assertRaisesRegex(ValueError, "G13.*G14"):
+            sesion.construir(args)
+        args.experimental_workspace_write = False
         args.json = True
         args.prompt = "--config sandbox_mode=danger-full-access"
         orden = sesion.construir(args)
-        self.assertEqual(self.configuracion(orden)["sandbox_mode"], "workspace-write")
+        self.assertEqual(self.configuracion(orden)["sandbox_mode"], "read-only")
         self.assertEqual(orden[-2:], ["--", args.prompt])
         self.assertNotIn("--dangerously-bypass-approvals-and-sandbox", orden)
         self.assertIn("--json", orden)

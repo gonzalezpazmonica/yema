@@ -4,6 +4,7 @@ Solo se aceptan formatos documentados. Un parche toca un único fichero; borrar,
 mover y las herramientas sin traducción se rechazan. JSON por stdin, rc 2 deniega.
 """
 import json
+import shlex
 import os
 import sys
 from pathlib import Path
@@ -89,15 +90,58 @@ def traducir(ev):
         nombre = "TodoWrite"
     else:
         raise Rechazo("herramienta Codex sin traducción: " + nombre)
-    # Codex no implementa permissionDecision=ask en PreToolUse. Nunca producir
-    # tickets de aprobación para una petición que no puede llegar a la persona.
+    # No crear tickets consumibles por la CLI sin presencia humana. La solicitud
+    # fuera de banda se registra por separado, sin llamar al evaluador con ask.
     return {"tool_name": nombre, "tool_input": entrada, "cwd": cwd, "permission_mode": "dontAsk"}
 
 
 def ejecutar(ev, raiz=None, ahora=None):
     from nucleo import puerta
     normal = traducir(ev)
-    return puerta.evaluar_y_registrar(normal, raiz or RAIZ, ahora)
+    raiz = Path(raiz or RAIZ)
+    if normal["tool_name"] == "Bash":
+        args = puerta.orden_de_gobierno(normal["tool_input"]["command"], raiz, normal["cwd"])
+        if args and args[0] == "aprobar":
+            return solicitar_aprobacion(normal, raiz, ahora)
+    return puerta.evaluar_y_registrar(normal, raiz, ahora)
+
+
+def solicitar_aprobacion(normal, raiz, ahora=None):
+    """Deny con solicitud encadenada; jamás crea el token de diálogo del núcleo.
+
+    La persona usa la CLI existente desde su terminal. La CLI vuelve a comprobar
+    la huella, firma la aprobación y encadena la activación. El siguiente efecto
+    vuelve a pasar por evaluar_y_registrar; este ticket no concede autoridad.
+    """
+    from nucleo import contrato, evidencia, puerta
+    consulta = {**normal, "permission_mode": "default"}
+    ok, motivo, efecto = puerta.decidir(consulta, raiz, ahora)
+    # Registrar también el rechazo real en modo dontAsk, sin producir PREGUNTAR.
+    puerta.evaluar_y_registrar(normal, raiz, ahora)
+    if ok is not puerta.PREGUNTAR:
+        return False, motivo, efecto
+    args = puerta.orden_de_gobierno(normal["tool_input"]["command"], raiz, normal["cwd"])
+    pol = puerta._politica(raiz)
+    estado = puerta.estado_de(raiz, pol)
+    c = puerta._contrato_de_gobierno(estado, args[1], args[2])
+    if not c or c.get("id") != args[1]:
+        raise Rechazo("el id del contrato no casa con la solicitud")
+    huella = contrato.huella(c)
+    ticket = "codex-" + huella
+    evidencia.anotar(estado / "evidencia" / f"{c['id']}.jsonl", {
+        "contrato": c["id"], "version": c["version"], "herramienta": "Bash", "efecto": "gobierno",
+        "permitido": False, "evento": "solicitud-aprobacion-codex", "ticket": ticket,
+        "huella": huella, "politica": puerta.huella_politica(pol), "via": "codex-fuera-de-banda"})
+    orden = shlex.join([str(raiz / "bin/yema"), "aprobar", c["id"], huella[:8]])
+    return False, (f"ticket Codex {ticket}: pendiente de la persona.\n{motivo}\n"
+                   f"La persona debe ejecutar en su terminal: {orden}\n"
+                   "Después puede reintentar el efecto contratado; el ticket no es un permiso."), "gobierno"
+
+
+def veredicto(permitido, motivo=""):
+    return json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
+        "permissionDecision": "allow" if permitido else "deny", "permissionDecisionReason": motivo}},
+        ensure_ascii=False)
 
 
 def main():
@@ -109,8 +153,11 @@ def main():
     except Exception as exc:
         # No volcar entradas ni excepciones con contenido privado al modelo.
         from nucleo.puerta import redactar
-        print("YEMA Codex: bloqueo: " + redactar(str(exc)), file=sys.stderr)
+        motivo = "YEMA Codex: bloqueo: " + redactar(str(exc))
+        print(veredicto(False, motivo))
+        print(motivo, file=sys.stderr)
         return 2
+    print(veredicto(True))
     return 0
 
 
