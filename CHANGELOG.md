@@ -1,5 +1,15 @@
 # Cambios
 
+## Sin publicar · 2026-10-28
+
+- Codex: solicitud de aprobación fuera de banda con ticket inerte y evidencia
+  encadenada; la aprobación y firma siguen siendo de la CLI humana.
+- Codex: vigilante del evaluador con veredicto explícito, timeout y terminación
+  de descendientes. No resuelve el fallo abierto del hook exterior.
+- Se retira la escritura experimental del lanzador y se restringen herramientas:
+  G12–G15 siguen sin equivalente operativo. Ensayo E2 incompleto documentado,
+  seis invocaciones y pruebas negativas sin modificar el núcleo.
+
 ## 0.1.0 · 2026-10-21 · Primera release pública
 
 Yema nace: una compañera de trabajo con IA que hace trabajo largo dentro de contratos que aprueba una persona, con una puerta fuera del modelo que hace cumplir sus límites.

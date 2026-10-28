@@ -26,7 +26,7 @@ def opciones(ajustes, prefijo=""):
     resultado = []
     for clave, valor in ajustes.items():
         nombre = prefijo + clave
-        if isinstance(valor, dict):
+        if isinstance(valor, dict) and valor:
             resultado += opciones(valor, nombre + ".")
         else:
             resultado += ["-c", nombre + "=" + toml_valor(valor)]
@@ -49,10 +49,9 @@ def comprobar_fuentes(raiz, codex_home):
 def construir(args, raiz=RAIZ):
     ajustes = tomllib.loads((raiz / "adaptadores/codex/config.toml").read_text())
     if args.experimental_workspace_write:
-        ajustes["sandbox_mode"] = "workspace-write"
-    ajustes["mcp_servers"]["savia-vaults"]["command"] = str(raiz / "bin/savia-vaults-mcp")
-    ajustes["mcp_servers"]["savia-vaults"]["cwd"] = str(raiz)
-    traductor = shlex.join([sys.executable, str(raiz / "adaptadores/codex/puerta.py")])
+        raise ValueError("G13 y G14 sin equivalente: workspace-write no se inicia sin una frontera externa por efecto")
+    # Un objeto vacío necesita override explícito; opciones() no lo recorría.
+    traductor = shlex.join([sys.executable, str(raiz / "adaptadores/codex/vigilante.py")])
     # Si Python no existe o el proceso muere, la shell también debe devolver 2.
     manejador = {"type": "command", "command": traductor + " || exit 2", "timeout": 30}
     ajustes["hooks"] = {"PreToolUse": [{"matcher": "*", "hooks": [manejador]}]}
@@ -70,21 +69,19 @@ def construir(args, raiz=RAIZ):
 
 
 def main():
-    p = argparse.ArgumentParser(description="Yema con Codex 0.163: exec aislado; escritura experimental.")
+    p = argparse.ArgumentParser(description="Yema con Codex 0.163: conversación restringida, sin escritura.")
     p.add_argument("--experimental-workspace-write", action="store_true",
-                   help="habilita escritura en el worktree; no ofrece equivalencia completa con Claude Code")
+                   help="opción retirada: se rechaza hasta verificar G13 y G14")
     p.add_argument("--json", action="store_true")
     p.add_argument("--output-last-message")
     p.add_argument("prompt", nargs="?", help="encargo; sin argumento se lee de stdin")
     args = p.parse_args()
     try:
+        orden = construir(args)
         comprobar_fuentes(RAIZ, Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex"))
         version = subprocess.run(["codex", "--version"], capture_output=True, text=True, check=True)
         if version.stdout.strip() != "codex-cli 0.163.0":
             raise ValueError("se requiere Codex CLI 0.163.0; volver a validar el adaptador para otra versión")
-        orden = construir(args)
-        if args.experimental_workspace_write:
-            print("YEMA Codex: escritura experimental; ver docs/codex-garantias.md", file=sys.stderr)
         os.chdir(RAIZ)
         os.execvp(orden[0], orden)
     except (OSError, ValueError, subprocess.SubprocessError) as exc:

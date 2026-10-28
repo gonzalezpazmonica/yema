@@ -1,25 +1,36 @@
-# Base auditada para Codex CLI 0.163.0. El lanzador añade rutas y hooks absolutos.
-# No copiar a ~/.codex: se aplica por invocación sin modificar ajustes personales.
+# Base auditada para Codex CLI 0.163.0. No instalar en ~/.codex.
+# G13/G14 no se cumplen en workspace-write: solo conversación restringida.
 model = "gpt-6.1-terra"
 model_reasoning_effort = "medium"
 approval_policy = "never"
 sandbox_mode = "read-only"
 web_search = "disabled"
 project_root_markers = []
+mcp_servers = {}
 
 [features]
 hooks = true
+shell_tool = false
 apps = false
 plugins = false
+remote_plugin = false
 multi_agent = false
+multi_agent_v2 = false
+goals = false
+sleep_tool = false
+in_app_browser = false
+browser_use = false
+browser_use_external = false
+computer_use = false
+image_generation = false
+view_image = false
 shell_snapshot = false
+skill_mcp_dependency_install = false
+workspace_dependencies = false
+tool_suggest = false
+request_permissions_tool = false
 
 [sandbox_workspace_write]
 network_access = false
 exclude_tmpdir_env_var = true
 exclude_slash_tmp = true
-
-[mcp_servers.savia-vaults]
-command = "./bin/savia-vaults-mcp"
-env_vars = ["SAVIA_VAULTS_NODE", "SAVIA_VAULTS_DIR", "SAVIA_VAULTS_DOMES"]
-required = true
