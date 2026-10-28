@@ -1,0 +1,4 @@
+#!/bin/sh
+# Solo configuración auditada por invocación; nunca instala ni aprueba contratos.
+R="$(dirname "$(readlink -f "$0")")/.."
+exec python3 "$R/adaptadores/codex/sesion.py" "$@"

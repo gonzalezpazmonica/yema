@@ -1,0 +1,25 @@
+# Base auditada para Codex CLI 0.163.0. El lanzador añade rutas y hooks absolutos.
+# No copiar a ~/.codex: se aplica por invocación sin modificar ajustes personales.
+model = "gpt-6.1-terra"
+model_reasoning_effort = "medium"
+approval_policy = "never"
+sandbox_mode = "read-only"
+web_search = "disabled"
+project_root_markers = []
+
+[features]
+hooks = true
+apps = false
+plugins = false
+multi_agent = false
+shell_snapshot = false
+
+[sandbox_workspace_write]
+network_access = false
+exclude_tmpdir_env_var = true
+exclude_slash_tmp = true
+
+[mcp_servers.savia-vaults]
+command = "./bin/savia-vaults-mcp"
+env_vars = ["SAVIA_VAULTS_NODE", "SAVIA_VAULTS_DIR", "SAVIA_VAULTS_DOMES"]
+required = true
