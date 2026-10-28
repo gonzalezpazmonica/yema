@@ -86,6 +86,11 @@ claude                                         # y a hablar con ella
 
 Al abrir el arnés en esta carpeta se cargan `AGENTS.md` (su arranque), la puerta (`.claude/settings.json`), sus skills (`.claude/skills/`) y las cúpulas de conocimiento (`.mcp.json`). Sin contrato activo, Yema lee, investiga, conversa y propone; no cambia nada.
 
+Hay un [adaptador experimental para Codex 0.163](adaptadores/codex/README.md),
+con Python 3.11+ y solo lectura por defecto. Su equivalencia operativa está
+pendiente; consulta la [matriz de garantías](docs/codex-garantias.md) y el
+[resultado del ensayo](docs/codex-ensayo.md) antes de habilitar escritura.
+
 ---
 
 ## El contrato, para personas
