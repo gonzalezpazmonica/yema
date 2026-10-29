@@ -1,11 +1,22 @@
 # Adaptador Codex 0.163
 
 **Experimental: no hay equivalencia operativa E2 con Claude Code.**
-La campaña G11–G14 conserva 11/15 coincidencias funcionales en sondas y deja
-G12–G15 abiertas. En seis invocaciones reales, la puerta concedió la escritura
-permitida y bloqueó dos destinos fuera de alcance, pero el editor no consiguió
-escribir. Un error o timeout del hook exterior permite continuar al editor.
-[Matriz](../../docs/codex-garantias.md) · [Ensayo](../../docs/codex-ensayo.md).
+El ejecutor externo verifica G13/G14 para crear un fichero nuevo: propuesta JSON,
+puerta real, evidencia común y aplicación acotada. La matriz cuenta 13/15
+compatibles en ese alcance; G12/G15 siguen abiertas. El recorrido nativo conserva
+la restricción anterior: el editor no conseguía escribir y continuaba tras un
+error o timeout del hook exterior.
+[Matriz](../../docs/codex-garantias.md) · [Ejecutor y ensayo nuevo](../../docs/codex-ejecutor.md)
+· [Ensayo histórico](../../docs/codex-ensayo.md).
+
+## Creación con ejecutor externo
+
+`python3 -m adaptadores.codex.ejecutor` separa al productor de la aplicación:
+Codex solo ve un snapshot filtrado en bwrap, no el workspace ni el estado real.
+Requiere contrato vigente, estado dedicado y configuración de la operadora.
+Solo crea ficheros nuevos; no ejecuta órdenes, edita ni borra. No se puede compartir
+ese estado simultáneamente con CLI/Claude. Uso y recuperación en el
+[informe](../../docs/codex-ejecutor.md); el núcleo permanece intacto.
 
 ## Uso restringido
 
@@ -90,15 +101,17 @@ python3 -m unittest discover -s pruebas -p 'test_codex*.py' -v
 python3 -m unittest discover -s pruebas -v
 ```
 
-56/56 pruebas del adaptador; 314 pasan de 326 generales, con 12 omitidas por
-confianza de bwrap preexistente. Los 19 tests nuevos detectan mutaciones.
+94/94 pruebas del adaptador; 359 pasan de 371 generales, con 12 omitidas por
+confianza de bwrap preexistente. Las pruebas de la caja nueva sí se ejecutan.
+Los 38 tests del ejecutor detectan 34 mutaciones del adaptador en copias;
+`pruebas/mutar_codex_ejecutor.py` reproduce la comprobación.
 `pruebas/ensayo_codex_garantias.py` cuenta hasta seis invocaciones, incluso
 fallos, en copias con contratos y claves sintéticos. Solo ese ensayo contiene
 sondas de workspace-write. La campaña autorizada ya está agotada: no iniciar
 otra cambiando su directorio. Un rc=0 sin escritura, eventos y recibos no es PASS.
 
 Riesgos y decisiones abiertas: catálogo efectivo sin inspección autoritativa,
-colaboración nativa y funciones genéricas aún sin retirada certificada, fallos
-del hook exterior, escritura E2 fallida y transporte MCP de producción pendiente.
-No habilitar E2 hasta disponer de una frontera que controle cada efecto incluso
-si el hook falla.
+funciones genéricas aún sin retirada certificada y transporte MCP de producción
+pendiente. La creación externa evita el hook; los efectos del editor nativo
+siguen restringidos. Faltan edición, recetas de órdenes, proxy de red al proveedor
+y reservas coordinadas con otros adaptadores.

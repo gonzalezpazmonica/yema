@@ -1,5 +1,15 @@
 # Cambios
 
+## Sin publicar · 2026-10-29
+
+- Codex: ejecutor externo de creación con propuestas JSON, puerta real,
+  reserva e intención durables en la evidencia común y reconciliación sin
+  reintentos ni reembolso de presupuesto. No cambia el núcleo.
+- Productor aislado con bwrap, vista filtrada de solo lectura y auth efímera.
+  G13/G14 verificadas para creación externa; G12/G15 siguen abiertas.
+- Ensayo E2 con Terra medium, seis llamadas acotadas, pruebas negativas y
+  mutaciones reproducibles. Se conserva el lanzador nativo restringido.
+
 ## Sin publicar · 2026-10-28
 
 - Codex: solicitud de aprobación fuera de banda con ticket inerte y evidencia
