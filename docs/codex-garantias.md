@@ -1,26 +1,31 @@
 # Codex: inventario y garantías de Yema
 
-Fuente: encargo G11–G14 del 2026-10-28, sobre `origin/main` `73f8cde`
-(PR #19 incorporada). Se conserva la lógica de `nucleo/puerta.py`.
+Fuente: encargos G11–G14 del 2026-10-28 y ejecutor externo del 2026-10-29,
+sobre `origin/main` `99f26cf` (PR #19 y #20 fusionadas). Se conserva la lógica
+de `nucleo/puerta.py`. El [ejecutor y su ensayo](codex-ejecutor.md) añaden un
+recorrido de creación; el lanzador nativo anterior sigue restringido.
 
 | Requisito de la persona | Fuente | Resultado verificable |
 |---|---|---|
 | Compensar la aprobación humana sin `ask` | G11 | Deny con ticket inerte y recibo encadenado; la CLI humana existente firma y activa; reintento comprobado en fixture |
 | Retirar vías que no pasan por la puerta | G12 | Se retiran shell, web, conectores y otras funciones; persisten vías nativas sin retirada verificada: no equivalente |
-| Fallar cerrado ante fallo o timeout del hook | G13 | Vigilante del evaluador; fallo del hook exterior sigue abierto en Codex: no equivalente |
-| Escribir efectivamente dentro del ámbito E2 | G14 | Un permiso y dos rechazos correctos; la escritura permitida falla después: no equivalente |
-| Ensayar con Terra medium, máximo seis invocaciones | Encargo actual | 6/6, hogar temporal con auth borrada; [resultados](codex-ensayo.md) |
+| Fallar cerrado ante fallo o timeout del hook | G13 | Ejecutor fuera del arnés: exige reserva real y permiso ligado a la propuesta; muerte, timeout y excepción sin destino; productor sin hooks |
+| Escribir efectivamente dentro del ámbito E2 | G14 | Creación externa con bytes exactos; fuera del glob y fuera de raíz sin efecto; no se habilita workspace-write |
+| Ensayar con Terra medium, máximo seis invocaciones | Encargo del ejecutor | 6/6 en campaña propia; hogares temporales borrados; [resultados](codex-ejecutor-resultados.json). Campaña anterior: [histórico](codex-ensayo.md) |
 | No cambiar núcleo, gobierno, identidad ni metadatos git | Restricción del encargo | Cambios solo en adaptador, pruebas, documentación y changelog; sin commits ni publicación |
 
-**Resultado: PARCIAL. 11/15 compatibles en sondas funcionales (G01–G11);
-no hay equivalencia operativa E2. G12–G15 siguen sin equivalente completo.**
+**Resultado: 13/15 compatibles en el alcance comprobado (G01–G11 y G13/G14
+para creación externa de un fichero nuevo). G12 y G15 siguen abiertas;
+no hay equivalencia operativa general con Claude Code.**
 Esta cifra cuenta comprobaciones del traductor y del flujo humano, no quince
-barreras efectivas en una sesión. No se ha cerrado el objetivo G11–G14.
+barreras efectivas en una sesión. G13/G14 del recorrido nativo anterior siguen
+sin resolver: el recorrido nuevo evita depender de ese editor y sus hooks.
 
 El lanzador queda en **conversación restringida**: sin shell ni servidores MCP,
-con sandbox `read-only`. La opción `--experimental-workspace-write` ahora se
+con sandbox `read-only`. La opción `--experimental-workspace-write` se
 rechaza antes de iniciar Codex. El perfil pierde ejecución, acceso a cúpulas y
-escritura; no debe presentarse como un reemplazo operativo de Claude Code.
+escritura nativa. `python3 -m adaptadores.codex.ejecutor` ofrece por separado
+propuestas JSON y un aplicador externo de creación, con bwrap comprobado.
 
 ## Fuentes y comportamiento comprobado
 
@@ -66,14 +71,27 @@ real de Claude en este encargo.
 | G07 Git de lectura gratis y contratado | Consultas listadas gratuitas | Compatible en sondas | Consulta tras agotar presupuesto y git add material; git retirado del perfil actual |
 | G08 Cúpulas y confidencialidad | MCP con cúpula y nivel | Compatible en sondas | Alias y controles conservados; el perfil actual no conecta MCP ni permite acceso a cúpulas |
 | G09 Tests preexistentes protegidos | Requiere enmienda | Compatible en sondas | Editar un test existente se deniega |
-| G10 Evidencia encadenada | Recibos por hash | Compatible en sondas | Cadena íntegra en ensayos E2 y de solicitud; atomicidad concurrente no demostrada |
+| G10 Evidencia encadenada | Recibos por hash | Compatible en sondas y creación externa | Reserva del núcleo e intención/resultado en la misma cadena, fsync antes de aplicar, corrupción y pendientes bloquean; no usar el estado simultáneamente con CLI/Claude |
 | G11 Aprobación humana | `ask` y token consumible; CLI con firma | Flujo fuera de banda compatible en sondas y solicitud real | Ticket inerte, sin token de diálogo; CLI sin terminal rechazada, terminal simulada firma y activa, siguiente efecto pasa. No hubo humana en el ensayo. Con shell retirada, el lanzador no puede emitir automáticamente la solicitud Bash |
 | G12 Todas las vías de acción | Depende de la cobertura del arnés | **Sin equivalente completo** | Shell y stdin retiradas; web/apps/plugins desactivados. El perfil ensayado aún anuncia colaboración y funciones genéricas MCP. Estas últimas se bloquean por hook, no están retiradas. No se invocaron subagentes |
-| G13 Fallar cerrado si falla el arnés | Evaluador en error devuelve 2 | **Sin equivalente completo** | Vigilante bloquea timeout, muerte y ausencia del evaluador; error/timeout del hook exterior deja continuar al editor. Read-only reduce efectos, no demuestra cobertura total |
-| G14 Escritura efectiva y acotada E2 | Write/Edit y órdenes contratadas | **Sin equivalente operativo** | Un parche permitido no escribe; dos parches fuera de alcance sí se deniegan. Se retira workspace-write del lanzador, incluso para contratos firmados |
+| G13 Fallar cerrado si falla el arnés | Evaluador en error devuelve 2 | **Verificada para creación externa** | Productor en caja sin workspace ni estado, sin hooks; solo permiso explícito + rc=0 + reserva real. Puerta muerta, timeout y excepción sin destino en ensayo; caída de supervisora y pendientes en tests. Una caída tras publicar exige reconciliar, sin reintento |
+| G14 Escritura efectiva y acotada E2 | Write/Edit y órdenes contratadas | **Verificada para creación externa** | Codex real propone el fichero permitido y existe con bytes exactos; fuera del glob y fuera de raíz se rechazan. Solo crear, sin reemplazo, padres existentes; edición y órdenes no implementadas |
 | G15 Arranque y exclusividad MCP efectivos | SessionStart y strict-mcp-config | **Sin equivalente operativo** | Arranque reutilizado, fuentes locales acotadas y MCP vacío; no hay transporte MCP de producción comprobado ni exclusividad total certificada |
 
 ## Compensaciones implementadas
+
+G13/G14, actualización del 2026-10-29: `adaptadores/codex/ejecutor/` mantiene
+Codex en una caja bwrap con vista filtrada y montada en solo lectura. La caja
+no monta workspace, gobierno, evidencia ni hogar original. El supervisor recibe
+JSON cerrado, llama a `evaluar_y_registrar` en un hijo con plazo y valida su
+reserva durable. La creación exclusiva se publica después de revalidar contrato,
+política, directorio y plazo. Diario común y reconciliador conservan el presupuesto
+incluso tras una caída; pendientes y corrupción de contratos anteriores también
+impiden continuar. Se requiere estado dedicado sin sesiones CLI/Claude simultáneas.
+El [informe](codex-ejecutor.md) delimita aislamiento, red y recuperación.
+
+Las siguientes compensaciones del recorrido anterior se conservan; su campaña
+histórica no se presenta como verificación del ejecutor nuevo.
 
 G11: el adaptador consulta `decidir` para comprobar la solicitud, registra el
 rechazo real en `dontAsk` y añade un recibo `solicitud-aprobacion-codex` con la
@@ -114,8 +132,8 @@ MCP. Desactivar capacidades reduce utilidad y no demuestra equivalencia por
 inactividad. La solicitud G11 no es un diálogo humano nativo ni una autorización
 producida por el modelo.
 
-Decisiones abiertas: una frontera externa que ejecute cada efecto con su propio
-veredicto, credenciales/gobierno/evidencia fuera de raíces escribibles y una
-comprobación autoritativa del catálogo efectivo. También falta un entorno donde
-la escritura permitida de E2 funcione y el transporte MCP real. La campaña de
-seis invocaciones está agotada; esta entrega no autoriza nuevas llamadas.
+Decisiones abiertas: extender la frontera externa a edición y recetas de órdenes,
+reservas coordinadas con otros adaptadores, ancla externa de la cadena, proxy de
+red limitado al proveedor y comprobación autoritativa del catálogo efectivo.
+Falta transporte MCP real de producción. Las campañas anterior y del ejecutor
+están agotadas por separado; esta entrega no autoriza nuevas llamadas.
