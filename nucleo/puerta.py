@@ -18,7 +18,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from nucleo import contrato, evidencia, firma  # noqa: E402
+from nucleo import aislar, contrato, evidencia, firma  # noqa: E402
 
 INTERNAS = {"TodoWrite", "AskUserQuestion", "ToolSearch", "EnterPlanMode", "ExitPlanMode", "ListAgents", "Skill"}
 LECTURA = {"Read", "Glob", "Grep", "LS", "NotebookRead"}
@@ -819,6 +819,25 @@ def _separar_cd(entrada, cwd):
     return nuevo, {**entrada, "command": m.group(2).strip()}
 
 
+def envoltorio(ev, raiz, ahora=None):
+    """La orden concedida, reescrita para que corra bajo nucleo/aislar.py con el ámbito del contrato.
+
+    La puerta juzga la orden, no lo que hace por dentro: el kernel (Landlock) acota lo que lee y
+    escribe. Se conserva el «cd <carpeta> &&» delante; un tubo a filtros o un heredoc citado quedan
+    detrás y alimentan o filtran a la orden aislada. None si no hay contrato vigente o no es Bash.
+    """
+    if ev.get("tool_name") != "Bash":
+        return None
+    c, _ = activo(Path(os.path.realpath(raiz)), _politica(Path(raiz)), ahora or datetime.now(timezone.utc))
+    if c is None:
+        return None
+    cmd = (ev.get("tool_input") or {}).get("command", "")
+    m = CD_Y_ORDEN.fullmatch(cmd)
+    if m and not any(ch in METACARACTERES for ch in m.group(2)):
+        return f"cd {m.group(1)} && " + aislar.prefijo(raiz, c) + m.group(2).strip()
+    return aislar.prefijo(raiz, c) + cmd.lstrip()
+
+
 HEREDOC_CITADO = re.compile(r"(?P<orden>[^\n<]+?)\s*<<-?\s*(?P<q>['\"])(?P<tag>\w+)(?P=q)\n.*\n(?P=tag)\s*", re.S)
 FILTROS = {"head", "tail", "grep", "wc"}
 
@@ -1094,6 +1113,8 @@ def main():
     try:
         ev = json.loads(sys.stdin.read())
         ok, motivo, efecto = evaluar_y_registrar(ev, raiz)
+        # Lo que la puerta deja ejecutar corre aislado por el kernel: ella no ve dentro del proceso.
+        aislada = envoltorio(ev, raiz) if ok and efecto == "ejecutar" else None
     except Exception as e:  # falla cerrado
         print(f"YEMA: puerta en error, bloqueo: {e}", file=sys.stderr)
         return 2
@@ -1103,9 +1124,15 @@ def main():
         return 0
     if ok and efecto not in ("leer", "interno"):
         # El contrato es el permiso: lo concedido no se vuelve a preguntar paso a paso.
-        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow",
-                                                 "permissionDecisionReason": f"Yema: {efecto} concedido"}},
-                         ensure_ascii=False))
+        salida = {"hookEventName": "PreToolUse", "permissionDecision": "allow",
+                  "permissionDecisionReason": f"Yema: {efecto} concedido"}
+        if efecto == "ejecutar":
+            if not aislada:
+                print("YEMA: puerta en error, bloqueo: no sé aislar esta orden", file=sys.stderr)
+                return 2
+            salida["updatedInput"] = {**(ev.get("tool_input") or {}), "command": aislada}
+            salida["permissionDecisionReason"] += " (aislado por el kernel: solo el ámbito del contrato)"
+        print(json.dumps({"hookSpecificOutput": salida}, ensure_ascii=False))
         return 0
     if not ok:
         print(f"YEMA: {motivo}", file=sys.stderr)

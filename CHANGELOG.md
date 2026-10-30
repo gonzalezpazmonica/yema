@@ -1,5 +1,9 @@
 # Cambios
 
+## Sin publicar
+
+- **Órdenes aisladas por el kernel (Landlock)**: lo que la puerta deja ejecutar bajo contrato corre con lectura y escritura acotadas al ámbito (`nucleo/aislar.py`); sin Landlock no corre, salvo `ambito.aislamiento: "si_hay"`, que `yema resumen` muestra. Cierra el hallazgo L39: un script concedido leía cualquier fichero del disco.
+
 ## Sin publicar · 2026-10-29
 
 - Codex: ejecutor externo de creación con propuestas JSON, puerta real,

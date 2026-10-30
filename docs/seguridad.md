@@ -10,13 +10,16 @@ Yema parte de una idea: el modelo puede equivocarse o dejarse convencer por lo q
 - **Lo confidencial**: solo lee las cúpulas que tiene nombradas.
 - **La memoria de lo ocurrido**: recibos encadenados que delatan cualquier cambio.
 - **Probar sin riesgo**: `yema prueba` ejecuta en una copia desechable dentro de un sandbox bwrap de root (sin red, sin el hogar, solo /usr, /etc y la copia, con tiempo y tamaño limitados); lo vetado no se copia. Si no hay un bwrap de confianza, no ejecuta.
+- **Lo que hace una orden por dentro**: la puerta juzga la orden, no lo que hace el proceso. Por eso cada orden de efecto `ejecutar` que concede un contrato corre bajo Landlock (`nucleo/aislar.py`, sin privilegios ni bwrap): el kernel solo le deja leer el ámbito, `ambito.lectura` y lo del sistema (/usr, /etc, /proc), y escribir en el ámbito y en un /tmp propio que se borra al terminar. Si el kernel no admite Landlock, la orden no corre, salvo que el contrato diga `ambito.aislamiento: "si_hay"`, y `yema resumen` lo muestra.
 - **Ante la duda**: bloquea.
 
 Cada «nunca» tiene una prueba que intenta hacerlo (`pruebas/`), y se comprueba que romper un control a propósito hace fallar alguna prueba.
 
 ## Lo que todavía no cubre
 
-- Una orden permitida ejecuta lo que ejecute: por eso el destino es el sandbox de Savia Space.
+- El aislamiento cubre ficheros, no la red: una orden concedida aún puede conectarse fuera.
+- Solo se aíslan las órdenes de efecto `ejecutar`. git y las órdenes de red (npm, cargo, pip…) corren sin aislar; un hook de git que escriba una orden aislada dentro del ámbito correría fuera de la caja en el siguiente `git commit`.
+- El entorno (variables) se hereda tal cual. El destino sigue siendo el sandbox de Savia Space.
 - La puerta solo ve lo que el arnés le pasa.
 - El diálogo de permisos vale lo que valga el arnés; en modos que no preguntan, aprobar se deniega.
 - El ticket prueba que se preguntó, no quién contestó.

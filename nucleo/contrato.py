@@ -14,6 +14,9 @@ EFECTOS = {"leer", "escribir", "borrar", "ejecutar", "red", "git-local", "git-re
            "fusionar", "publicar", "delegar", "escribir-cupula"}
 REQUERIDOS = ("id", "version", "estado", "proposito", "responsable", "ejecutora",
               "nivel", "ambito", "autoridad", "recursos", "evidencia")
+# Cómo corren las órdenes concedidas: «obligatorio» (por defecto) solo bajo Landlock;
+# «si_hay» también sin aislar si el kernel no lo admite, y el resumen lo dice.
+AISLAMIENTOS = ("obligatorio", "si_hay")
 TRANSICIONES = {
     "borrador": {"cuestionado", "candidato", "rechazado"},
     "cuestionado": {"borrador", "candidato", "rechazado"},
@@ -76,6 +79,8 @@ def errores(c):
         e.append(f"efecto concedido y prohibido a la vez: {x}")
     if not str(amb.get("raiz", "")).startswith("/"):
         e.append("ambito.raiz debe ser absoluta")
+    if amb.get("aislamiento", "obligatorio") not in AISLAMIENTOS:
+        e.append(f"ambito.aislamiento desconocido {amb.get('aislamiento')!r}: {' o '.join(AISLAMIENTOS)}")
     lectura = amb.get("lectura", [])
     if not isinstance(lectura, list):
         e.append("ambito.lectura debe ser una lista de carpetas absolutas")
@@ -180,6 +185,11 @@ def resumen(c):
         + (f" · nunca en: {', '.join(amb.get('vetadas', []))}" if amb.get("vetadas") else ""),
         f"Presupuesto: {r.get('efectos_max', 0)} efectos · Caduca: {a.get('caduca')}",
     ]
+    if "ejecutar" in a.get("efectos", []):
+        lee = ", ".join([str(amb.get("raiz"))] + [str(x) for x in amb.get("lectura", [])])
+        lineas.append(f"Aislamiento: las órdenes solo leen {lee} y el sistema, y solo escriben en {amb.get('raiz')}"
+                      + ("; si el kernel no admite Landlock, corren SIN AISLAR"
+                         if amb.get("aislamiento") == "si_hay" else "; sin Landlock en el kernel, no corren"))
     post = [p.get("id", "") for p in c.get("condiciones", {}).get("post", [])]
     if post:
         lineas.append(f"Al cerrar demostrará: {', '.join(post)}")

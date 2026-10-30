@@ -74,7 +74,7 @@ Aprobar un contrato es la única puerta a la autonomía, así que no puede depen
 
 ## Empezar
 
-Requisitos: Python 3.10+ (sin dependencias), un arnés que ejecute hooks `PreToolUse` (hoy, Claude Code) y, para `yema prueba`, bubblewrap instalado por el sistema (`/usr/bin/bwrap`, de root).
+Requisitos: Python 3.10+ (sin dependencias), un arnés que ejecute hooks `PreToolUse` (hoy, Claude Code), Linux con Landlock (5.13 o posterior; sin él, las órdenes de un contrato no corren salvo que el contrato lo declare) y, para `yema prueba`, bubblewrap instalado por el sistema (`/usr/bin/bwrap`, de root).
 
 ```bash
 git clone https://github.com/gonzalezpazmonica/yema.git && cd yema
@@ -155,7 +155,7 @@ Pensada para la persona; Yema la usa en la conversación y la puerta decide qué
 - Ante cualquier error, la puerta bloquea.
 - Las garantías se prueban a través del hook real, tal como está registrado.
 
-**No garantiza** (y lo dice): una orden permitida puede hacer más de lo que su nombre sugiere (por eso la frontera fuerte es el sandbox del sistema operativo en Savia Space); la puerta solo ve lo que el arnés le enseña; el presupuesto cuenta efectos, no tokens. Detalle en [`docs/seguridad.md`](docs/seguridad.md).
+**No garantiza** (y lo dice): una orden permitida corre aislada por el kernel (Landlock) dentro del ámbito del contrato, pero dentro de él puede hacer más de lo que su nombre sugiere y aún tiene red; la puerta solo ve lo que el arnés le enseña; el presupuesto cuenta efectos, no tokens. Detalle en [`docs/seguridad.md`](docs/seguridad.md).
 
 ---
 
