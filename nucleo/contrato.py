@@ -81,6 +81,13 @@ def errores(c):
         e.append("ambito.raiz debe ser absoluta")
     if amb.get("aislamiento", "obligatorio") not in AISLAMIENTOS:
         e.append(f"ambito.aislamiento desconocido {amb.get('aislamiento')!r}: {' o '.join(AISLAMIENTOS)}")
+    lectura = amb.get("lectura", [])
+    if not isinstance(lectura, list):
+        e.append("ambito.lectura debe ser una lista de carpetas absolutas")
+    else:
+        for x in lectura:
+            if not isinstance(x, str) or not x.startswith("/") or not x.strip("/"):
+                e.append(f"ambito.lectura: {x!r} debe ser una carpeta absoluta y no la raíz del disco")
     for g in amb.get("escritura", []) + amb.get("vetadas", []):
         if not _glob_seguro(g):
             e.append(f"glob inseguro {g!r}: relativo a la raíz, sin '..'")
@@ -141,8 +148,10 @@ def transicion(c, nuevo, quien, motivo, politica, ahora=None):
 def vigente(c, politica, ahora=None):
     """(True, '') si el contrato autoriza efectos ahora mismo."""
     ahora = ahora or datetime.now(timezone.utc)
-    if errores(c):
-        return False, "contrato inválido"
+    e = errores(c)
+    if e:
+        return False, ("contrato inválido: " + "; ".join(e)
+                       + ". Hace falta una nueva versión del contrato aprobada por la persona")
     if c["estado"] != "activo":
         return False, f"contrato no vigente: estado {c['estado']}"
     ap = c["autoridad"].get("aprobacion")
@@ -165,6 +174,10 @@ def resumen(c):
         f"Contrato {c.get('id')} v{c.get('version')} · nivel {c.get('nivel')} · huella {huella(c)[:8]}",
         f"Para qué: {c.get('proposito')}",
         f"Dónde: {amb.get('raiz')}",
+    ]
+    if amb.get("lectura"):
+        lineas.append(f"Puede leer además: {', '.join(amb['lectura'])}")
+    lineas += [
         f"Puede: {', '.join(a.get('efectos', [])) or 'nada'}",
         f"Puede escribir en: {', '.join(amb.get('escritura', [])) or 'ningún sitio'}",
         f"Órdenes: {'; '.join(a.get('ordenes', [])) or 'ninguna'}",

@@ -4,6 +4,26 @@
 
 - **Órdenes aisladas por el kernel (Landlock)**: lo que la puerta deja ejecutar bajo contrato corre con lectura y escritura acotadas al ámbito (`nucleo/aislar.py`); sin Landlock no corre, salvo `ambito.aislamiento: "si_hay"`, que `yema resumen` muestra. Cierra el hallazgo L39: un script concedido leía cualquier fichero del disco.
 
+## Sin publicar · 2026-10-29
+
+- Codex: ejecutor externo de creación con propuestas JSON, puerta real,
+  reserva e intención durables en la evidencia común y reconciliación sin
+  reintentos ni reembolso de presupuesto. No cambia el núcleo.
+- Productor aislado con bwrap, vista filtrada de solo lectura y auth efímera.
+  G13/G14 verificadas para creación externa; G12/G15 siguen abiertas.
+- Ensayo E2 con Terra medium, seis llamadas acotadas, pruebas negativas y
+  mutaciones reproducibles. Se conserva el lanzador nativo restringido.
+
+## Sin publicar · 2026-10-28
+
+- Codex: solicitud de aprobación fuera de banda con ticket inerte y evidencia
+  encadenada; la aprobación y firma siguen siendo de la CLI humana.
+- Codex: vigilante del evaluador con veredicto explícito, timeout y terminación
+  de descendientes. No resuelve el fallo abierto del hook exterior.
+- Se retira la escritura experimental del lanzador y se restringen herramientas:
+  G12–G15 siguen sin equivalente operativo. Ensayo E2 incompleto documentado,
+  seis invocaciones y pruebas negativas sin modificar el núcleo.
+
 ## 0.1.0 · 2026-10-21 · Primera release pública
 
 Yema nace: una compañera de trabajo con IA que hace trabajo largo dentro de contratos que aprueba una persona, con una puerta fuera del modelo que hace cumplir sus límites.
